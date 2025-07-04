@@ -64,7 +64,16 @@ class InventoryController extends Controller
      */
     public function update(Request $request, Inventory $inventory)
     {
-        //
+        $validated = $request->validate([
+            'unit' => 'required|string',
+            'description' => 'required|string',
+            'quantity' => 'required|integer',
+            'price' => 'required|numeric',
+        ]);
+
+        $inventory->update($validated);
+
+        return response()->json(['success' => true, 'item' => $inventory]);
     }
 
     /**
@@ -73,5 +82,24 @@ class InventoryController extends Controller
     public function destroy(Inventory $inventory)
     {
         //
+    }
+
+    /**
+     * Pull out (reduce quantity) of an inventory item.
+     */
+    public function pullOut(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'quantity' => 'required|integer|min:1',
+        ]);
+
+        $item = Inventory::findOrFail($id);
+        if ($item->quantity < $validated['quantity']) {
+            return response()->json(['error' => 'Not enough quantity in stock.'], 422);
+        }
+        $item->quantity -= $validated['quantity'];
+        $item->save();
+
+        return response()->json(['success' => true, 'item' => $item]);
     }
 }

@@ -52,7 +52,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Office Inventory
     Route::get('/officerequest', fn() => Inertia::render('OfficeRequest'))->name('officerequest');
     Route::get('/officeinventory', fn() => Inertia::render('OfficesInventory'))->name('officeinventory');
-    Route::get('/inventory', fn() => Inertia::render('Inventory'))->name('inventory');
+    Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory');
+    Route::post('/inventory', [InventoryController::class, 'store'])->name('inventory.store');
+    Route::patch('/inventory/{id}/pullout', [InventoryController::class, 'pullOut'])->name('inventory.pullout');
+    Route::patch('/inventory/{inventory}', [InventoryController::class, 'update'])->name('inventory.update');
 
     // Purchase and Request History
     Route::get('/purchaserequest', fn() => Inertia::render('PurchaseRequest'))->name('purchaserequest');

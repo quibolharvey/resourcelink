@@ -1,45 +1,84 @@
 <script setup>
-import { ref } from 'vue';
-import { Head } from '@inertiajs/vue3';
+import { ref, onMounted, watchEffect } from 'vue';
+import { Head, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 
 const showAddModal = ref(false);
 const showPullOutModal = ref(false);
+const showEditModal = ref(false);
 
 // New item fields
 const newItem = ref({ unit: '', description: '', quantity: '', price: '' });
 const pullOutItem = ref({ id: '', quantity: '' });
+const editItem = ref({ id: '', unit: '', description: '', quantity: '', price: '' });
 
-// Inventory items
-const items = ref([]);
+const page = usePage();
+const items = ref(page.props.items || []);
 
-// Add item to inventory
-const addItem = () => {
+// Keep items in sync with backend props
+watchEffect(() => {
+  if (page.props.items) {
+    items.value = page.props.items;
+  }
+});
+
+// Add item to inventory (backend)
+const addItem = async () => {
     if (newItem.value.unit && newItem.value.description && newItem.value.quantity && newItem.value.price) {
-        items.value.push({
-            id: Date.now(),
-            unit: newItem.value.unit,
-            description: newItem.value.description,
-            quantity: parseInt(newItem.value.quantity),
-            price: parseFloat(newItem.value.price),
+        const response = await fetch('/inventory', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
+            body: JSON.stringify(newItem.value),
         });
-        newItem.value = { unit: '', description: '', quantity: '', price: '' };
-        showAddModal.value = false;
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            alert('Failed to add item.');
+        }
     }
 };
 
-// Pull out item
-const pullOut = () => {
-    const itemIndex = items.value.findIndex(item => item.description.toLowerCase() === pullOutItem.value.id.toLowerCase());
-    if (itemIndex !== -1) {
-        const currentQty = items.value[itemIndex].quantity;
-        const removeQty = parseInt(pullOutItem.value.quantity);
-        if (removeQty > 0 && currentQty >= removeQty) {
-            items.value[itemIndex].quantity -= removeQty;
+// Pull out item (backend)
+const pullOut = async () => {
+    const item = items.value.find(i => i.description.toLowerCase() === pullOutItem.value.id.toLowerCase());
+    if (item) {
+        const response = await fetch(`/inventory/${item.id}/pullout`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
+            body: JSON.stringify({ quantity: pullOutItem.value.quantity }),
+        });
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            const error = await response.json();
+            alert(error.error || 'Failed to pull out item.');
         }
+    } else {
+        alert('Item not found.');
     }
-    pullOutItem.value = { id: '', quantity: '' };
-    showPullOutModal.value = false;
+};
+
+const openEditModal = (item) => {
+    editItem.value = { ...item };
+    showEditModal.value = true;
+};
+
+const updateItem = async () => {
+    const response = await fetch(`/inventory/${editItem.value.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
+        body: JSON.stringify({
+            unit: editItem.value.unit,
+            description: editItem.value.description,
+            quantity: editItem.value.quantity,
+            price: editItem.value.price,
+        }),
+    });
+    if (response.ok) {
+        window.location.reload();
+    } else {
+        alert('Failed to update item.');
+    }
 };
 </script>
 
@@ -84,7 +123,7 @@ const pullOut = () => {
                             <td class="py-2">{{ item.quantity }}</td>
                             <td class="py-2">₱ {{ item.price }}</td>
                             <td class="py-2 space-x-2">
-                                <button class="bg-blue-200 hover:bg-blue-300 text-xs px-3 py-1 rounded">EDIT</button>
+                                <button @click="openEditModal(item)" class="bg-blue-200 hover:bg-blue-300 text-xs px-3 py-1 rounded">EDIT</button>
                                 <button class="bg-gray-200 hover:bg-gray-300 text-xs px-3 py-1 rounded">Request →</button>
                             </td>
                         </tr>
@@ -119,6 +158,21 @@ const pullOut = () => {
                     <div class="text-right space-x-2">
                         <button @click="showPullOutModal = false" class="px-3 py-1 bg-gray-300 rounded">Cancel</button>
                         <button @click="pullOut" class="px-3 py-1 bg-red-500 text-white rounded">Pull Out</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Edit Item Modal -->
+            <div v-if="showEditModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                <div class="bg-white rounded-lg p-6 w-96">
+                    <h2 class="text-lg font-bold mb-4">Edit Item</h2>
+                    <input v-model="editItem.unit" type="text" placeholder="Unit" class="mb-2 w-full p-2 border rounded" />
+                    <input v-model="editItem.description" type="text" placeholder="Description" class="mb-2 w-full p-2 border rounded" />
+                    <input v-model="editItem.quantity" type="number" placeholder="Quantity" class="mb-2 w-full p-2 border rounded" />
+                    <input v-model="editItem.price" type="number" placeholder="Unit Price" class="mb-4 w-full p-2 border rounded" />
+                    <div class="text-right space-x-2">
+                        <button @click="showEditModal = false" class="px-3 py-1 bg-gray-300 rounded">Cancel</button>
+                        <button @click="updateItem" class="px-3 py-1 bg-blue-500 text-white rounded">Update</button>
                     </div>
                 </div>
             </div>
