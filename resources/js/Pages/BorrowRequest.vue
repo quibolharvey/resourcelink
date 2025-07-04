@@ -48,7 +48,7 @@ const updateStatus = (id, status) => {
                   <td class="px-4 py-2">{{ borrow.expected_return }}</td>
                   <td class="px-4 py-2">{{ borrow.user?.name || 'N/A' }}</td>
                   <td class="px-4 py-2">{{ borrow.user?.email || 'N/A' }}</td>
-                  <td class="px-4 py-2">{{ borrow.user?.phone || 'N/A' }}</td>
+                  <td class="px-4 py-2">{{ borrow.user?.phone_number || 'N/A' }}</td>
                   <td class="px-4 py-2">{{ borrow.user?.address || 'N/A' }}</td>
                   <td class="px-4 py-2">{{ borrow.status }}</td>
                   <td class="px-4 py-2 space-x-2">

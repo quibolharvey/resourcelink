@@ -26,6 +26,6 @@ class BorrowRequest extends Model
 
     public function item()
     {
-        return $this->belongsTo(Item::class);
+        return $this->belongsTo(ItemManagement::class, 'item_id');
     }
 }

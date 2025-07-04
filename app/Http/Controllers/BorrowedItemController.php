@@ -12,7 +12,12 @@ class BorrowedItemController extends Controller
      */
     public function index()
     {
-        //
+        $borrowedItems = BorrowedItem::with(['user', 'item', 'borrowRequest'])
+            ->where('user_id', auth()->id())
+            ->get();
+        return inertia('BorrowedItem', [
+            'borrowedItems' => $borrowedItems,
+        ]);
     }
 
     /**
@@ -27,50 +32,49 @@ class BorrowedItemController extends Controller
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
-{
-    $request->validate([
-        'item_id' => 'required|exists:item_management,id',
-        'quantity' => 'required|integer|min:1',
-        'expected_return_date' => 'required|date|after_or_equal:today',
-    ]);
+    {
+        $request->validate([
+            'item_id' => 'required|exists:item_management,id',
+            'quantity' => 'required|integer|min:1',
+            'expected_return_date' => 'required|date|after_or_equal:today',
+        ]);
 
-    BorrowedItem::create([
-        'user_id' => auth()->id(),
-        'item_id' => $request->item_id,
-        'quantity' => $request->quantity,
-        'expected_return_date' => $request->expected_return_date,
-    ]);
+        BorrowedItem::create([
+            'user_id' => auth()->id(),
+            'item_id' => $request->item_id,
+            'quantity' => $request->quantity,
+            'expected_return_date' => $request->expected_return_date,
+        ]);
 
-    return redirect()->route('borrow.request')->with('success', 'Item borrowed successfully.');
-}
-public function showRequests()
-{
-    $borrowedItems = BorrowedItem::with('user', 'item')->get();
+        return redirect()->route('borrow.request')->with('success', 'Item borrowed successfully.');
+    }
 
-    return Inertia::render('BorrowRequest', [
-        'borrowedItems' => $borrowedItems,
-    ]);
-}
-public function showBorrowRequests()
-{
-    $borrowedItems = \App\Models\BorrowedItem::with(['user', 'item'])->get();
+    public function showRequests()
+    {
+        $borrowedItems = BorrowedItem::with('user', 'item')->get();
 
-    return \Inertia\Inertia::render('BorrowRequest', [
-        'borrowedItems' => $borrowedItems
-    ]);
-}
+        return Inertia::render('BorrowRequest', [
+            'borrowedItems' => $borrowedItems,
+        ]);
+    }
 
+    public function showBorrowRequests()
+    {
+        $borrowedItems = \App\Models\BorrowedItem::with(['user', 'item'])->get();
 
-public function showAll()
-{
-    $borrowedItems = BorrowedItem::with('user', 'item')->get();
+        return \Inertia\Inertia::render('BorrowRequest', [
+            'borrowedItems' => $borrowedItems
+        ]);
+    }
 
-    return Inertia::render('BorrowedItems', [
-        'borrowedItems' => $borrowedItems,
-    ]);
-}
+    public function showAll()
+    {
+        $borrowedItems = BorrowedItem::with('user', 'item')->get();
 
-
+        return Inertia::render('BorrowedItems', [
+            'borrowedItems' => $borrowedItems,
+        ]);
+    }
 
     /**
      * Display the specified resource.

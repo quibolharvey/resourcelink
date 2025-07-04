@@ -7,6 +7,8 @@ use Inertia\Inertia;
 use App\Http\Controllers\ItemManagementController;
 use App\Http\Controllers\BorrowRequestController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\BorrowedItemController;
+use App\Http\Controllers\BorrowedHistoryController;
 
 /*
 |--------------------------------------------------------------------------
@@ -43,7 +45,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/borrow-requests', [ItemManagementController::class, 'showBorrowRequests'])->name('borrow.requests');
 
     // Borrowing Views (render-only)
-    Route::get('/borrowrequest', fn() => Inertia::render('BorrowRequest'))->name('borrowrequest');
+    Route::get('/borrowrequest', [BorrowRequestController::class, 'index'])->name('borrowrequest');
     Route::get('/borrowhistory', fn() => Inertia::render('BorrowHistory'))->name('borrowhistory');
     Route::get('/borroweditem', fn() => Inertia::render('BorrowedItem'))->name('borroweditem');
 
@@ -59,6 +61,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Borrowing Logic
     Route::post('/borrow', [BorrowRequestController::class, 'store'])->name('borrow.store');
     Route::patch('/borrowrequest/{id}', [BorrowRequestController::class, 'updateStatus'])->name('borrowrequest.update');
+
+    // Borrowed Items and History
+    Route::get('/borroweditem', [BorrowedItemController::class, 'index'])->name('borroweditem');
+    Route::get('/borrowhistory', [BorrowedHistoryController::class, 'index'])->name('borrowhistory');
+    Route::patch('/borrowhistory/{id}', [BorrowedHistoryController::class, 'updateStatus'])->name('borrowedhistory.update');
 });
 
 /*
