@@ -13,7 +13,7 @@ class InventoryController extends Controller
      */
     public function index()
     {
-        $items = Inventory::all();
+        $items = Inventory::where('user_id', auth()->id())->get();
         return Inertia::render('Inventory', ['items' => $items]);
     }
 
@@ -36,6 +36,7 @@ class InventoryController extends Controller
             'quantity' => 'required|integer',
             'price' => 'required|numeric',
         ]);
+        $validated['user_id'] = auth()->id();
 
         Inventory::create($validated);
 

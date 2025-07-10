@@ -18,7 +18,7 @@ const updateStatus = (id, status) => {
 
 <template>
   <Head title="Borrowed Requests" />
-  <AuthenticatedLayout>
+  <AuthenticatedLayout> 
     <template #header>
       <h2 class="text-xl font-semibold leading-tight text-gray-800">Borrowed Requests</h2>
     </template>

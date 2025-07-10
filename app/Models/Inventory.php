@@ -9,5 +9,10 @@ class Inventory extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['unit', 'description', 'quantity', 'price'];
+    protected $fillable = ['unit', 'description', 'quantity', 'price', 'user_id'];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

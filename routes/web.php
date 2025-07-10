@@ -9,6 +9,7 @@ use App\Http\Controllers\BorrowRequestController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\BorrowedItemController;
 use App\Http\Controllers\BorrowedHistoryController;
+use App\Http\Controllers\OfficeRequestController;
 
 /*
 |--------------------------------------------------------------------------
@@ -50,7 +51,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/borroweditem', fn() => Inertia::render('BorrowedItem'))->name('borroweditem');
 
     // Office Inventory
-    Route::get('/officerequest', fn() => Inertia::render('OfficeRequest'))->name('officerequest');
+    Route::get('/officerequest', [OfficeRequestController::class, 'index'])->name('officerequest');
     Route::get('/officeinventory', fn() => Inertia::render('OfficesInventory'))->name('officeinventory');
     Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory');
     Route::post('/inventory', [InventoryController::class, 'store'])->name('inventory.store');
@@ -59,7 +60,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Purchase and Request History
     Route::get('/purchaserequest', fn() => Inertia::render('PurchaseRequest'))->name('purchaserequest');
-    Route::get('/requesthistory', fn() => Inertia::render('RequestHistory'))->name('requesthistory');
+    Route::get('/requesthistory', [OfficeRequestController::class, 'userHistory'])->name('requesthistory');
 
     // Borrowing Logic
     Route::post('/borrow', [BorrowRequestController::class, 'store'])->name('borrow.store');
@@ -69,6 +70,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/borroweditem', [BorrowedItemController::class, 'index'])->name('borroweditem');
     Route::get('/borrowhistory', [BorrowedHistoryController::class, 'index'])->name('borrowhistory');
     Route::patch('/borrowhistory/{id}', [BorrowedHistoryController::class, 'updateStatus'])->name('borrowedhistory.update');
+
+    // Purchase Cart API
+    Route::get('/api/purchase-cart', [\App\Http\Controllers\PurchaseCartController::class, 'getCart']);
+    Route::post('/api/purchase-cart/items', [\App\Http\Controllers\PurchaseCartController::class, 'addItem']);
+    Route::delete('/api/purchase-cart/items/{itemId}', [\App\Http\Controllers\PurchaseCartController::class, 'removeItem']);
+    Route::post('/api/purchase-cart/submit', [\App\Http\Controllers\PurchaseCartController::class, 'submitCart']);
+
+    // Office Request API
+    Route::get('/api/office-request/{id}', [OfficeRequestController::class, 'show']);
+    Route::post('/api/office-request/{id}/approve', [OfficeRequestController::class, 'approve']);
+    Route::get('/api/office-request-history', [OfficeRequestController::class, 'allHistory']);
 });
 
 /*

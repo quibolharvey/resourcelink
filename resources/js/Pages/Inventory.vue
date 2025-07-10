@@ -1,11 +1,16 @@
 <script setup>
 import { ref, onMounted, watchEffect } from 'vue';
-import { Head, usePage } from '@inertiajs/vue3';
+import { Head, usePage, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 
 const showAddModal = ref(false);
 const showPullOutModal = ref(false);
 const showEditModal = ref(false);
+const showRequestModal = ref(false);
+const requestItem = ref({});
+const requestQuantity = ref(1);
+const requestSuccess = ref(false);
+const requestError = ref('');
 
 // New item fields
 const newItem = ref({ unit: '', description: '', quantity: '', price: '' });
@@ -80,6 +85,45 @@ const updateItem = async () => {
         alert('Failed to update item.');
     }
 };
+
+const openRequestModal = (item) => {
+    requestItem.value = { ...item };
+    requestQuantity.value = 1;
+    showRequestModal.value = true;
+};
+
+const submitRequest = async () => {
+    try {
+        const response = await fetch('/api/purchase-cart/items', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            },
+            body: JSON.stringify({
+                inventory_item_id: requestItem.value.id,
+                unit: requestItem.value.unit,
+                description: requestItem.value.description,
+                quantity: requestQuantity.value,
+                price: requestItem.value.price,
+            }),
+        });
+        if (response.ok) {
+            requestSuccess.value = true;
+            requestError.value = '';
+            showRequestModal.value = false;
+        } else {
+            const error = await response.json();
+            requestError.value = error.message || 'Failed to add item to cart.';
+        }
+    } catch (e) {
+        requestError.value = 'Failed to add item to cart.';
+    }
+};
+
+const goToPurchaseRequest = () => {
+    router.visit('/purchaserequest');
+};
 </script>
 
 <template>
@@ -99,6 +143,7 @@ const updateItem = async () => {
                 <div class="space-x-2">
                     <button @click="showAddModal = true" class="bg-green-400 hover:bg-green-500 text-white px-4 py-1 rounded">Add Item</button>
                     <button @click="showPullOutModal = true" class="bg-red-400 hover:bg-red-500 text-white px-4 py-1 rounded">Pull out Item</button>
+                    <button @click="goToPurchaseRequest" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-1 rounded">Go to Purchase Request</button>
                 </div>
             </div>
 
@@ -124,7 +169,7 @@ const updateItem = async () => {
                             <td class="py-2">₱ {{ item.price }}</td>
                             <td class="py-2 space-x-2">
                                 <button @click="openEditModal(item)" class="bg-blue-200 hover:bg-blue-300 text-xs px-3 py-1 rounded">EDIT</button>
-                                <button class="bg-gray-200 hover:bg-gray-300 text-xs px-3 py-1 rounded">Request →</button>
+                                <button @click="openRequestModal(item)" class="bg-gray-200 hover:bg-gray-300 text-xs px-3 py-1 rounded">Request →</button>
                             </td>
                         </tr>
                         <tr v-if="items.length === 0">
@@ -176,6 +221,22 @@ const updateItem = async () => {
                     </div>
                 </div>
             </div>
+
+            <!-- Request Modal -->
+            <div v-if="showRequestModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                <div class="bg-white rounded-lg p-6 w-96">
+                    <h2 class="text-lg font-bold mb-4">Request Item</h2>
+                    <div class="mb-2">Description: <span class="font-semibold">{{ requestItem.description }}</span></div>
+                    <div class="mb-2">Available: <span class="font-semibold">{{ requestItem.quantity }}</span></div>
+                    <input v-model.number="requestQuantity" type="number" min="1" :max="requestItem.quantity" placeholder="Quantity to Request" class="mb-4 w-full p-2 border rounded" />
+                    <div class="text-right space-x-2">
+                        <button @click="showRequestModal = false" class="px-3 py-1 bg-gray-300 rounded">Cancel</button>
+                        <button @click="submitRequest" class="px-3 py-1 bg-green-500 text-white rounded">Request</button>
+                    </div>
+                </div>
+            </div>
+            <div v-if="requestSuccess" class="fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded shadow z-50">Item added to cart!</div>
+            <div v-if="requestError" class="fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded shadow z-50">{{ requestError }}</div>
         </div>
     </AuthenticatedLayout>
 </template>
