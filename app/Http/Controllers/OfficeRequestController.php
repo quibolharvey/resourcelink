@@ -48,6 +48,9 @@ class OfficeRequestController extends Controller
     public function allHistory()
     {
         $requests = \App\Models\OfficeRequest::with(['user', 'purchaseCart'])
+            ->whereHas('purchaseCart', function($query) {
+                $query->where('status', 'approved');
+            })
             ->orderByDesc('created_at')
             ->get();
         return response()->json($requests);
