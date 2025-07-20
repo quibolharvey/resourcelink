@@ -14,15 +14,6 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Create default user for testing
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-            'phone_number' => '1234567891',
-            'address' => '123 Test Street',
-            'password' => bcrypt('password'),
-        ]);
-
         // Create roles
         $adminRole = Role::firstOrCreate(['name' => 'admin']);
         $officeRole = Role::firstOrCreate(['name' => 'office']);
@@ -36,34 +27,52 @@ class DatabaseSeeder extends Seeder
         // Assign permissions to admin role
         $adminRole->givePermissionTo([$editArticles, $deleteArticles, $viewDashboard]);
 
-        // Create admin user
-        $admin = User::factory()->create([
-            'name' => 'Admin Account',
-            'email' => 'admin@example.com',
-            'phone_number' => '1234567890',
-            'address' => 'sample address',
-            'password' => bcrypt('password'),
-        ]);
+        // Create admin user if it doesn't exist
+        $admin = User::firstOrCreate(
+            ['email' => 'admin@example.com'],
+            [
+                'name' => 'Admin Account',
+                'phone_number' => '1234567890',
+                'address' => 'sample address',
+                'password' => bcrypt('password'),
+            ]
+        );
         $admin->assignRole($adminRole);
 
-        // Create office user
-        $office = User::factory()->create([
-            'name' => 'Office Account',
-            'email' => 'office@example.com',
-            'phone_number' => '0987654321',
-            'address' => 'another sample address',
-            'password' => bcrypt('password'),
-        ]);
+        // Create office user if it doesn't exist
+        $office = User::firstOrCreate(
+            ['email' => 'office@example.com'],
+            [
+                'name' => 'Office Account',
+                'phone_number' => '0987654321',
+                'address' => 'another sample address',
+                'password' => bcrypt('password'),
+            ]
+        );
         $office->assignRole($officeRole);
 
-        // Create regular user
-        $user = User::factory()->create([
-            'name' => 'User Account',
-            'email' => 'user@example.com',
-            'phone_number' => '1122334455',
-            'address' => 'user sample address',
-            'password' => bcrypt('password'),
-        ]);
+        // Create regular user if it doesn't exist
+        $user = User::firstOrCreate(
+            ['email' => 'user@example.com'],
+            [
+                'name' => 'User Account',
+                'phone_number' => '1122334455',
+                'address' => 'user sample address',
+                'password' => bcrypt('password'),
+            ]
+        );
         $user->assignRole($userRole);
+
+        // Create test user if it doesn't exist
+        $testUser = User::firstOrCreate(
+            ['email' => 'test@example.com'],
+            [
+                'name' => 'Test User',
+                'phone_number' => '1234567891',
+                'address' => '123 Test Street',
+                'password' => bcrypt('password'),
+            ]
+        );
+        $testUser->assignRole($userRole);
     }
 }

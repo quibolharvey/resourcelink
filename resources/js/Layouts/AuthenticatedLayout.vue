@@ -13,9 +13,7 @@ const showingNavigationDropdown = ref(false);
 <template>
     <div>
         <div class="min-h-screen bg-gray-100">
-            <nav
-                class="border-b border-gray-100 bg-white"
-            >
+            <nav class="border-b border-gray-100 bg-white">
                 <!-- Primary Navigation Menu -->
                 <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                     <div class="flex h-16 justify-between">
@@ -30,9 +28,7 @@ const showingNavigationDropdown = ref(false);
                             </div>
 
                             <!-- Navigation Links -->
-                            <div
-                                class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex"
-                            >
+                            <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
                                 <NavLink
                                     :href="route('dashboard')"
                                     :active="route().current('dashboard')"
@@ -209,16 +205,72 @@ const showingNavigationDropdown = ref(false);
                         >
                             Dashboard
                         </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            :href="route('itemmanagement')"
+                            :active="route().current('itemmanagement')"
+                        >
+                            Item Management
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            :href="route('borrowrequest')"
+                            :active="route().current('borrowrequest')"
+                        >
+                            Borrowing Request
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            :href="route('borrowhistory')"
+                            :active="route().current('borrowhistory')"
+                        >
+                            Borrowing History
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            :href="route('officeinventory')"
+                            :active="route().current('officeinventory')"
+                        >
+                            Office Inventory
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            :href="route('officerequest')"
+                            :active="route().current('officerequest')"
+                        >
+                            Office Request
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            :href="route('items')"
+                            :active="route().current('items')"
+                        >
+                            Items
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            :href="route('borroweditem')"
+                            :active="route().current('borroweditem')"
+                        >
+                            Borrowed Items
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            :href="route('inventory')"
+                            :active="route().current('inventory')"
+                        >
+                            Inventory
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            :href="route('purchaserequest')"
+                            :active="route().current('purchaserequest')"
+                        >
+                            Purchase Request
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            :href="route('requesthistory')"
+                            :active="route().current('requesthistory')"
+                        >
+                            Request History
+                        </ResponsiveNavLink>
                     </div>
 
                     <!-- Responsive Settings Options -->
-                    <div
-                        class="border-t border-gray-200 pb-1 pt-4"
-                    >
+                    <div class="border-t border-gray-200 pb-1 pt-4">
                         <div class="px-4">
-                            <div
-                                class="text-base font-medium text-gray-800"
-                            >
+                            <div class="text-base font-medium text-gray-800">
                                 {{ $page.props.auth.user.name }}
                             </div>
                             <div class="text-sm font-medium text-gray-500">
