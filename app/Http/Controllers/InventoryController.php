@@ -103,4 +103,12 @@ class InventoryController extends Controller
 
         return response()->json(['success' => true, 'item' => $item]);
     }
+
+    public function officesInventory()
+    {
+        $items = \App\Models\Inventory::with('user')->get();
+        return \Inertia\Inertia::render('OfficesInventory', [
+            'items' => $items,
+        ]);
+    }
 }

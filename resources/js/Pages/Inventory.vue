@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watchEffect } from 'vue';
+import { ref, onMounted, watchEffect, computed } from 'vue';
 import { Head, usePage, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 
@@ -19,12 +19,21 @@ const editItem = ref({ id: '', unit: '', description: '', quantity: '', price: '
 
 const page = usePage();
 const items = ref(page.props.items || []);
+const searchTerm = ref('');
 
 // Keep items in sync with backend props
 watchEffect(() => {
   if (page.props.items) {
     items.value = page.props.items;
   }
+});
+
+const filteredItems = computed(() => {
+  if (!searchTerm.value) return items.value;
+  return items.value.filter(item =>
+    item.unit.toLowerCase().includes(searchTerm.value.toLowerCase()) ||
+    item.description.toLowerCase().includes(searchTerm.value.toLowerCase())
+  );
 });
 
 // Add item to inventory (backend)
@@ -136,107 +145,315 @@ const goToPurchaseRequest = () => {
             </h2>
         </template>
 
-        <div class="px-8 py-6 bg-gray-300 min-h-screen">
-            <!-- Header Buttons -->
-            <div class="flex justify-between items-center mb-4">
-                <input type="text" placeholder="Search Item" class="px-3 py-1 rounded border" />
-                <div class="space-x-2">
-                    <button @click="showAddModal = true" class="bg-green-400 hover:bg-green-500 text-white px-4 py-1 rounded">Add Item</button>
-                    <button @click="showPullOutModal = true" class="bg-red-400 hover:bg-red-500 text-white px-4 py-1 rounded">Pull out Item</button>
-                    <button @click="goToPurchaseRequest" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-1 rounded">Go to Purchase Request</button>
+        <div class="py-6">
+            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+                <!-- Header Buttons -->
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                    <div class="w-full sm:w-64">
+                        <input 
+                            type="text" 
+                            placeholder="Search Item" 
+                            class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" 
+                            v-model="searchTerm"
+                        />
+                    </div>
+                    <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+                        <button 
+                            @click="showAddModal = true" 
+                            class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md shadow-sm flex items-center justify-center"
+                        >
+                            Add Item
+                        </button>
+                        <button 
+                            @click="showPullOutModal = true" 
+                            class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md shadow-sm flex items-center justify-center"
+                        >
+                            Pull out Item
+                        </button>
+                        <button 
+                            @click="goToPurchaseRequest" 
+                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md shadow-sm flex items-center justify-center"
+                        >
+                            Go to Purchase Request
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Inventory Table -->
+                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock NO.</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UNIT</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ITEM DESCRIPTION</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">QUANTITY</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UNIT PRICE</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ACTION</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <tr v-for="(item, index) in filteredItems" :key="item.id" class="hover:bg-gray-50">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ index + 1 }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ item.unit }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ item.description }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ item.quantity }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₱ {{ item.price }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <div class="flex space-x-2">
+                                            <button 
+                                                @click="openEditModal(item)" 
+                                                class="text-blue-600 hover:text-blue-900"
+                                            >
+                                                Edit
+                                            </button>
+                                            <button 
+                                                @click="openRequestModal(item)" 
+                                                class="text-gray-600 hover:text-gray-900"
+                                            >
+                                                Request →
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr v-if="filteredItems.length === 0">
+                                    <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">No items available.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
-            <!-- Inventory Table -->
-            <div class="bg-white rounded-lg shadow p-4">
-                <table class="w-full text-left">
-                    <thead>
-                        <tr class="border-b">
-                            <th class="py-2 font-bold">Stock NO.</th>
-                            <th class="py-2 font-bold">UNIT</th>
-                            <th class="py-2 font-bold">ITEM DESCRIPTION</th>
-                            <th class="py-2 font-bold">QUANTITY</th>
-                            <th class="py-2 font-bold">UNIT PRICE</th>
-                            <th class="py-2 font-bold">ACTION</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="(item, index) in items" :key="item.id" class="border-t">
-                            <td class="py-2">{{ index + 1 }}</td>
-                            <td class="py-2">{{ item.unit }}</td>
-                            <td class="py-2">{{ item.description }}</td>
-                            <td class="py-2">{{ item.quantity }}</td>
-                            <td class="py-2">₱ {{ item.price }}</td>
-                            <td class="py-2 space-x-2">
-                                <button @click="openEditModal(item)" class="bg-blue-200 hover:bg-blue-300 text-xs px-3 py-1 rounded">EDIT</button>
-                                <button @click="openRequestModal(item)" class="bg-gray-200 hover:bg-gray-300 text-xs px-3 py-1 rounded">Request →</button>
-                            </td>
-                        </tr>
-                        <tr v-if="items.length === 0">
-                            <td colspan="6" class="text-center py-4 text-gray-500">No items available.</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
             <!-- Add Item Modal -->
-            <div v-if="showAddModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-                <div class="bg-white rounded-lg p-6 w-96">
-                    <h2 class="text-lg font-bold mb-4">Add Item</h2>
-                    <input v-model="newItem.unit" type="text" placeholder="Unit" class="mb-2 w-full p-2 border rounded" />
-                    <input v-model="newItem.description" type="text" placeholder="Description" class="mb-2 w-full p-2 border rounded" />
-                    <input v-model="newItem.quantity" type="number" placeholder="Quantity" class="mb-2 w-full p-2 border rounded" />
-                    <input v-model="newItem.price" type="number" placeholder="Unit Price" class="mb-4 w-full p-2 border rounded" />
-                    <div class="text-right space-x-2">
-                        <button @click="showAddModal = false" class="px-3 py-1 bg-gray-300 rounded">Cancel</button>
-                        <button @click="addItem" class="px-3 py-1 bg-blue-500 text-white rounded">Save</button>
+            <div v-if="showAddModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+                    <div class="p-6">
+                        <h2 class="text-lg font-medium text-gray-900 mb-4">Add New Item</h2>
+                        <div class="space-y-4">
+                            <div>
+                                <label for="unit" class="block text-sm font-medium text-gray-700">Unit</label>
+                                <input 
+                                    v-model="newItem.unit" 
+                                    type="text" 
+                                    id="unit"
+                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                />
+                            </div>
+                            <div>
+                                <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+                                <input 
+                                    v-model="newItem.description" 
+                                    type="text" 
+                                    id="description"
+                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                />
+                            </div>
+                            <div>
+                                <label for="quantity" class="block text-sm font-medium text-gray-700">Quantity</label>
+                                <input 
+                                    v-model="newItem.quantity" 
+                                    type="number" 
+                                    id="quantity"
+                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                />
+                            </div>
+                            <div>
+                                <label for="price" class="block text-sm font-medium text-gray-700">Unit Price</label>
+                                <input 
+                                    v-model="newItem.price" 
+                                    type="number" 
+                                    id="price"
+                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                />
+                            </div>
+                        </div>
+                        <div class="mt-6 flex justify-end space-x-3">
+                            <button 
+                                @click="showAddModal = false" 
+                                class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                @click="addItem" 
+                                class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            >
+                                Save
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- Pull Out Modal -->
-            <div v-if="showPullOutModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-                <div class="bg-white rounded-lg p-6 w-96">
-                    <h2 class="text-lg font-bold mb-4">Pull Out Item</h2>
-                    <input v-model="pullOutItem.id" type="text" placeholder="Item Description" class="mb-2 w-full p-2 border rounded" />
-                    <input v-model="pullOutItem.quantity" type="number" placeholder="Quantity to Pull Out" class="mb-4 w-full p-2 border rounded" />
-                    <div class="text-right space-x-2">
-                        <button @click="showPullOutModal = false" class="px-3 py-1 bg-gray-300 rounded">Cancel</button>
-                        <button @click="pullOut" class="px-3 py-1 bg-red-500 text-white rounded">Pull Out</button>
+            <div v-if="showPullOutModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+                    <div class="p-6">
+                        <h2 class="text-lg font-medium text-gray-900 mb-4">Pull Out Item</h2>
+                        <div class="space-y-4">
+                            <div>
+                                <label for="item-description" class="block text-sm font-medium text-gray-700">Item Description</label>
+                                <input 
+                                    v-model="pullOutItem.id" 
+                                    type="text" 
+                                    id="item-description"
+                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                />
+                            </div>
+                            <div>
+                                <label for="pullout-quantity" class="block text-sm font-medium text-gray-700">Quantity to Pull Out</label>
+                                <input 
+                                    v-model="pullOutItem.quantity" 
+                                    type="number" 
+                                    id="pullout-quantity"
+                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                />
+                            </div>
+                        </div>
+                        <div class="mt-6 flex justify-end space-x-3">
+                            <button 
+                                @click="showPullOutModal = false" 
+                                class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                @click="pullOut" 
+                                class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                            >
+                                Pull Out
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- Edit Item Modal -->
-            <div v-if="showEditModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-                <div class="bg-white rounded-lg p-6 w-96">
-                    <h2 class="text-lg font-bold mb-4">Edit Item</h2>
-                    <input v-model="editItem.unit" type="text" placeholder="Unit" class="mb-2 w-full p-2 border rounded" />
-                    <input v-model="editItem.description" type="text" placeholder="Description" class="mb-2 w-full p-2 border rounded" />
-                    <input v-model="editItem.quantity" type="number" placeholder="Quantity" class="mb-2 w-full p-2 border rounded" />
-                    <input v-model="editItem.price" type="number" placeholder="Unit Price" class="mb-4 w-full p-2 border rounded" />
-                    <div class="text-right space-x-2">
-                        <button @click="showEditModal = false" class="px-3 py-1 bg-gray-300 rounded">Cancel</button>
-                        <button @click="updateItem" class="px-3 py-1 bg-blue-500 text-white rounded">Update</button>
+            <div v-if="showEditModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+                    <div class="p-6">
+                        <h2 class="text-lg font-medium text-gray-900 mb-4">Edit Item</h2>
+                        <div class="space-y-4">
+                            <div>
+                                <label for="edit-unit" class="block text-sm font-medium text-gray-700">Unit</label>
+                                <input 
+                                    v-model="editItem.unit" 
+                                    type="text" 
+                                    id="edit-unit"
+                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                />
+                            </div>
+                            <div>
+                                <label for="edit-description" class="block text-sm font-medium text-gray-700">Description</label>
+                                <input 
+                                    v-model="editItem.description" 
+                                    type="text" 
+                                    id="edit-description"
+                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                />
+                            </div>
+                            <div>
+                                <label for="edit-quantity" class="block text-sm font-medium text-gray-700">Quantity</label>
+                                <input 
+                                    v-model="editItem.quantity" 
+                                    type="number" 
+                                    id="edit-quantity"
+                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                />
+                            </div>
+                            <div>
+                                <label for="edit-price" class="block text-sm font-medium text-gray-700">Unit Price</label>
+                                <input 
+                                    v-model="editItem.price" 
+                                    type="number" 
+                                    id="edit-price"
+                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                />
+                            </div>
+                        </div>
+                        <div class="mt-6 flex justify-end space-x-3">
+                            <button 
+                                @click="showEditModal = false" 
+                                class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                @click="updateItem" 
+                                class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            >
+                                Update
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- Request Modal -->
-            <div v-if="showRequestModal" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-                <div class="bg-white rounded-lg p-6 w-96">
-                    <h2 class="text-lg font-bold mb-4">Request Item</h2>
-                    <div class="mb-2">Description: <span class="font-semibold">{{ requestItem.description }}</span></div>
-                    <div class="mb-2">Available: <span class="font-semibold">{{ requestItem.quantity }}</span></div>
-                    <input v-model.number="requestQuantity" type="number" min="1" :max="requestItem.quantity" placeholder="Quantity to Request" class="mb-4 w-full p-2 border rounded" />
-                    <div class="text-right space-x-2">
-                        <button @click="showRequestModal = false" class="px-3 py-1 bg-gray-300 rounded">Cancel</button>
-                        <button @click="submitRequest" class="px-3 py-1 bg-green-500 text-white rounded">Request</button>
+            <div v-if="showRequestModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+                    <div class="p-6">
+                        <h2 class="text-lg font-medium text-gray-900 mb-4">Request Item</h2>
+                        <div class="space-y-4">
+                            <div>
+                                <p class="text-sm text-gray-700"><span class="font-medium">Description:</span> {{ requestItem.description }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-700"><span class="font-medium">Available:</span> {{ requestItem.quantity }}</p>
+                            </div>
+                            <div>
+                                <label for="request-quantity" class="block text-sm font-medium text-gray-700">Quantity to Request</label>
+                                <input 
+                                    v-model.number="requestQuantity" 
+                                    type="number" 
+                                    id="request-quantity"
+                                    min="1" 
+                                    :max="requestItem.quantity"
+                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                />
+                            </div>
+                        </div>
+                        <div class="mt-6 flex justify-end space-x-3">
+                            <button 
+                                @click="showRequestModal = false" 
+                                class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                @click="submitRequest" 
+                                class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                            >
+                                Request
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div v-if="requestSuccess" class="fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded shadow z-50">Item added to cart!</div>
-            <div v-if="requestError" class="fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded shadow z-50">{{ requestError }}</div>
+
+            <!-- Notification Messages -->
+            <div v-if="requestSuccess" class="fixed top-4 right-4">
+                <div class="bg-green-500 text-white px-4 py-2 rounded-md shadow-lg flex items-center">
+                    <span>Item added to cart!</span>
+                    <button @click="requestSuccess = false" class="ml-2">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div v-if="requestError" class="fixed top-4 right-4">
+                <div class="bg-red-500 text-white px-4 py-2 rounded-md shadow-lg flex items-center">
+                    <span>{{ requestError }}</span>
+                    <button @click="requestError = ''" class="ml-2">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
         </div>
     </AuthenticatedLayout>
 </template>
