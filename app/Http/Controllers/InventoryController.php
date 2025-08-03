@@ -74,7 +74,7 @@ class InventoryController extends Controller
 
         $inventory->update($validated);
 
-        return response()->json(['success' => true, 'item' => $inventory]);
+        return redirect()->back()->with('success', 'Item Updated Successfully');
     }
 
     /**
@@ -96,12 +96,15 @@ class InventoryController extends Controller
 
         $item = Inventory::findOrFail($id);
         if ($item->quantity < $validated['quantity']) {
-            return response()->json(['error' => 'Not enough quantity in stock.'], 422);
+            $item->quantity = 0;
+            $item->save();
+            return redirect()->back()->with('success', 'Item Pullout Success');
         }
         $item->quantity -= $validated['quantity'];
         $item->save();
+        // dd($item->quantity);
 
-        return response()->json(['success' => true, 'item' => $item]);
+        return redirect()->back()->with('success', 'Item Pullout Success');
     }
 
     public function officesInventory()
