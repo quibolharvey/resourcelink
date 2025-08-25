@@ -52,6 +52,14 @@ class RegisteredUserController extends Controller
 
     Auth::login($user);
 
+    if($user->hasRole('user')){
+        return redirect(route('items', absolute: false));
+    }
+
+    if($user->hasRole('office')){
+        return redirect(route('inventory', absolute: false));
+    }
+
     return redirect(route('dashboard', absolute: false));
 }
 }

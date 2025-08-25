@@ -1,7 +1,8 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 
+const page = usePage()
 
 defineProps({
     canLogin: {
@@ -22,11 +23,10 @@ defineProps({
 </script>
 
 <template>
+
     <Head title="Welcome" />
-    <div
-        class="min-h-screen flex flex-col bg-cover bg-center bg-no-repeat relative"
-        style="background-image: url('/images/background.jpg');"
-    >
+    <div class="min-h-screen flex flex-col bg-cover bg-center bg-no-repeat relative"
+        style="background-image: url('/images/background.jpg');">
         <!-- Gradient overlay -->
         <div class="absolute inset-0 bg-gradient-to-b from-blue-50/80 via-white/30 to-gray-50/70"></div>
 
@@ -35,25 +35,19 @@ defineProps({
             <!-- Header -->
             <header class="w-full py-4 px-6 flex justify-end items-center bg-white/80 backdrop-blur-sm shadow-sm">
                 <div class="flex items-center mr-auto">
-                    <Link :href="route('dashboard')">
+                    <p>
                         <ApplicationLogo class="block h-9 w-auto fill-current text-gray-800" />
-                    </Link>
+                    </p>
                     <span class="ml-2 font-bold text-lg text-gray-800">Calape ResourceLink</span>
                 </div>
-                <div class="flex items-center space-x-4">
-                    <Link
-                        v-if="canLogin"
-                        :href="route('login')"
-                        class="text-gray-600 hover:text-blue-600 font-medium transition-colors"
-                    >
-                        Log In
+                <div class="flex items-center space-x-4" v-if="!page.props.auth.user">
+                    <Link v-if="canLogin" :href="route('login')"
+                        class="text-gray-600 hover:text-blue-600 font-medium transition-colors">
+                    Log In
                     </Link>
-                    <Link
-                        v-if="canRegister"
-                        :href="route('register')"
-                        class="px-3 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition"
-                    >
-                        Sign Up
+                    <Link v-if="canRegister" :href="route('register')"
+                        class="px-3 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition">
+                    Sign Up
                     </Link>
                 </div>
             </header>
@@ -74,11 +68,9 @@ defineProps({
                     </p>
 
                     <div class="mt-8">
-                        <Link
-                            :href="route('login')"
-                            class="inline-block px-8 py-3 bg-blue-600 text-white font-bold rounded-lg shadow-lg hover:bg-blue-700 transform hover:scale-105 transition"
-                        >
-                            GET STARTED
+                        <Link :href="route('login')"
+                            class="inline-block px-8 py-3 bg-blue-600 text-white font-bold rounded-lg shadow-lg hover:bg-blue-700 transform hover:scale-105 transition">
+                        GET STARTED
                         </Link>
                     </div>
                 </div>

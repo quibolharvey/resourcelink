@@ -14,6 +14,12 @@ class BorrowRequestController extends Controller
 {
     public function store(Request $request)
 {
+    $user = auth()->user();
+
+        if(!$user->hasRole('admin')){
+            return redirect()->back();
+        }
+
     $request->validate([
         'item_id' => 'required|exists:items,id',
         'quantity' => 'required|integer|min:1',

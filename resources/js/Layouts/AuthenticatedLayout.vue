@@ -30,9 +30,9 @@ const showingNavigationDropdown = ref(false);
                         <div class="flex">
                             <!-- Logo -->
                             <div class="flex shrink-0 items-center">
-                                <Link :href="route('dashboard')">
+                                <Link href="/">
                                 <ApplicationLogo class="block h-9 w-auto fill-current text-gray-800" />
-                                
+
                                 </Link>
                                 Calape ResourceLink
                             </div>
@@ -156,42 +156,61 @@ const showingNavigationDropdown = ref(false);
                     hidden: !showingNavigationDropdown,
                 }" class="sm:hidden">
                     <div class="space-y-1 pb-3 pt-2">
-                        <ResponsiveNavLink :href="route('dashboard')" :active="route().current('dashboard')">
-                            Dashboard
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('itemmanagement')" :active="route().current('itemmanagement')">
-                            Item Management
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('borrowrequest')" :active="route().current('borrowrequest')">
-                            Borrowing Request
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('borrowhistory')" :active="route().current('borrowhistory')">
-                            Borrowing History
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('officeinventory')"
-                            :active="route().current('officeinventory')">
-                            Office Inventory
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('officerequest')" :active="route().current('officerequest')">
-                            Office Request
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('items')" :active="route().current('items')">
-                            Items
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('borroweditem')" :active="route().current('borroweditem')">
-                            Borrowed Items
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('inventory')" :active="route().current('inventory')">
-                            Inventory
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('purchaserequest')"
-                            :active="route().current('purchaserequest')">
-                            Purchase Request
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('requesthistory')" :active="route().current('requesthistory')">
-                            Request History
-                        </ResponsiveNavLink>
+
+                        <!-- Admin Links -->
+                        <div v-if="isAdmin">
+                            <ResponsiveNavLink :href="route('dashboard')" :active="route().current('dashboard')">
+                                Dashboard
+                            </ResponsiveNavLink>
+                            <ResponsiveNavLink :href="route('itemmanagement')"
+                                :active="route().current('itemmanagement')">
+                                Item Management
+                            </ResponsiveNavLink>
+                            <ResponsiveNavLink :href="route('borrowrequest')"
+                                :active="route().current('borrowrequest')">
+                                Borrowing Request
+                            </ResponsiveNavLink>
+                            <ResponsiveNavLink :href="route('borrowhistory')"
+                                :active="route().current('borrowhistory')">
+                                Borrowing History
+                            </ResponsiveNavLink>
+                            <ResponsiveNavLink :href="route('officeinventory')"
+                                :active="route().current('officeinventory')">
+                                Office Inventory
+                            </ResponsiveNavLink>
+                            <ResponsiveNavLink :href="route('officerequest')"
+                                :active="route().current('officerequest')">
+                                Office Request
+                            </ResponsiveNavLink>
+                        </div>
+
+                        <!-- User Links -->
+                        <div v-if="isUser">
+                            <ResponsiveNavLink :href="route('items')" :active="route().current('items')">
+                                Items
+                            </ResponsiveNavLink>
+                            <ResponsiveNavLink :href="route('borroweditem')" :active="route().current('borroweditem')">
+                                Borrowed Items
+                            </ResponsiveNavLink>
+                        </div>
+
+                        <!-- Office Links -->
+                        <div v-if="isOffice">
+                            <ResponsiveNavLink :href="route('inventory')" :active="route().current('inventory')">
+                                Inventory
+                            </ResponsiveNavLink>
+                            <ResponsiveNavLink :href="route('purchaserequest')"
+                                :active="route().current('purchaserequest')">
+                                Purchase Request
+                            </ResponsiveNavLink>
+                            <ResponsiveNavLink :href="route('requesthistory')"
+                                :active="route().current('requesthistory')">
+                                Request History
+                            </ResponsiveNavLink>
+                        </div>
+
                     </div>
+
 
                     <!-- Responsive Settings Options -->
                     <div class="border-t border-gray-200 pb-1 pt-4">

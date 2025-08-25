@@ -109,6 +109,13 @@ class InventoryController extends Controller
 
     public function officesInventory()
     {
+
+        $user = auth()->user();
+
+        if(!$user->hasRole('admin')){
+            return redirect()->back();
+        }
+
         $items = \App\Models\Inventory::with('user')->get();
         return \Inertia\Inertia::render('OfficesInventory', [
             'items' => $items,

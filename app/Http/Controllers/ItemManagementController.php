@@ -15,6 +15,12 @@ class ItemManagementController extends Controller
      */
     public function index()
     {
+        $user = auth()->user();
+
+        if(!$user->hasRole('admin')){
+            return redirect()->back();
+        }
+
         $items = ItemManagement::latest()->get();
         return Inertia::render('ItemManagement', ['items' => $items]);
     }
@@ -109,6 +115,13 @@ class ItemManagementController extends Controller
 
     public function showAll()
     {
+
+        // $user = auth()->user();
+
+        // if(!$user->hasRole('user')){
+
+        //     return redirect()->back();
+        // }
         $items = \App\Models\ItemManagement::all();
         return \Inertia\Inertia::render('Items', ['items' => $items]);
     }

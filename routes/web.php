@@ -19,6 +19,10 @@ use App\Http\Controllers\DashboardController;
 */
 
 Route::get('/', function () {
+
+
+
+
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
@@ -35,41 +39,86 @@ Route::get('/', function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
 
+    //Admin pages
+    Route::middleware(['role:admin'])->group(function () {
+        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+        Route::get('/itemmanagement', [ItemManagementController::class, 'index'])->name('itemmanagement');
+        Route::get('/borrowrequest', [BorrowRequestController::class, 'index'])->name('borrowrequest');
+
+        // Route::get('/borrowhistory', function () {
+
+        //     return Inertia::render('BorrowHistory');
+        // })->name('borrowhistory');
+        Route::get('/borrowhistory', [BorrowedHistoryController::class, 'index'])->name('borrowhistory');
+
+        Route::get('/officeinventory', [InventoryController::class, 'officesInventory'])->name('officeinventory');
+        Route::get('/officerequest', [OfficeRequestController::class, 'index'])->name('officerequest');
+    });
+
+    //Office pages
+    Route::middleware(['role:office'])->group(function () {
+        Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory');
+
+        Route::get('/purchaserequest', function() {
+
+            $user = auth()->user();
+
+            if(!$user->hasRole('office')){
+                return redirect()->back();
+            }
+
+            return Inertia::render('PurchaseRequest');
+        })->name('purchaserequest');
+
+        Route::get('/requesthistory', [OfficeRequestController::class, 'userHistory'])->name('requesthistory');
+    });
+
+    // User pages
+    Route::middleware(['role:user'])->group(function () {
+        Route::get('/items', [ItemManagementController::class, 'showAll'])->name('items');
+        // Route::get('/borroweditem', fn() => Inertia::render('BorrowedItem'))->name('borroweditem');
+        Route::get('/borroweditem', [BorrowedItemController::class, 'index'])->name('borroweditem');
+
+
+    });
+
     // Dashboard
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
 
     // Item Management
-    Route::get('/itemmanagement', [ItemManagementController::class, 'index'])->name('itemmanagement');
-    Route::get('/items', [ItemManagementController::class, 'showAll'])->name('items');
+
+
     Route::post('/items', [ItemManagementController::class, 'store'])->name('items.store');
     Route::match(['put', 'post'], '/items/{id}', [ItemManagementController::class, 'update'])->name('items.update');
     Route::delete('/items/{id}', [ItemManagementController::class, 'destroy'])->name('items.destroy');
     Route::get('/borrow-requests', [ItemManagementController::class, 'showBorrowRequests'])->name('borrow.requests');
 
     // Borrowing Views (render-only)
-    Route::get('/borrowrequest', [BorrowRequestController::class, 'index'])->name('borrowrequest');
-    Route::get('/borrowhistory', fn() => Inertia::render('BorrowHistory'))->name('borrowhistory');
-    Route::get('/borroweditem', fn() => Inertia::render('BorrowedItem'))->name('borroweditem');
+
+
+
+
+
 
     // Office Inventory
-    Route::get('/officerequest', [OfficeRequestController::class, 'index'])->name('officerequest');
-    Route::get('/officeinventory', [InventoryController::class, 'officesInventory'])->name('officeinventory');
-    Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory');
+
+
+
     Route::post('/inventory', [InventoryController::class, 'store'])->name('inventory.store');
     Route::patch('/inventory/{id}/pullout', [InventoryController::class, 'pullOut'])->name('inventory.pullout');
     Route::patch('/inventory/{inventory}', [InventoryController::class, 'update'])->name('inventory.update');
 
     // Purchase and Request History
-    Route::get('/purchaserequest', fn() => Inertia::render('PurchaseRequest'))->name('purchaserequest');
-    Route::get('/requesthistory', [OfficeRequestController::class, 'userHistory'])->name('requesthistory');
+
+
 
     // Borrowing Logic
     Route::post('/borrow', [BorrowRequestController::class, 'store'])->name('borrow.store');
     Route::patch('/borrowrequest/{id}', [BorrowRequestController::class, 'updateStatus'])->name('borrowrequest.update');
 
     // Borrowed Items and History
-    Route::get('/borroweditem', [BorrowedItemController::class, 'index'])->name('borroweditem');
-    Route::get('/borrowhistory', [BorrowedHistoryController::class, 'index'])->name('borrowhistory');
+
+
     Route::patch('/borrowhistory/{id}', [BorrowedHistoryController::class, 'updateStatus'])->name('borrowedhistory.update');
 
     // Purchase Cart API

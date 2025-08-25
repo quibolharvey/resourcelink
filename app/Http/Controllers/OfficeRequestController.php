@@ -10,6 +10,13 @@ class OfficeRequestController extends Controller
 {
     public function index()
     {
+
+        $user = auth()->user();
+
+        if(!$user->hasRole('admin')){
+            return redirect()->back();
+        }
+
         $requests = OfficeRequest::with(['user', 'purchaseCart'])
             ->orderByDesc('created_at')
             ->get();
@@ -26,6 +33,12 @@ class OfficeRequestController extends Controller
 
     public function userHistory()
     {
+        $user = auth()->user();
+
+        if(!$user->hasRole('office')){
+            return redirect()->back();
+        }
+
         $userId = auth()->id();
         $requests = \App\Models\OfficeRequest::with(['user', 'purchaseCart'])
             ->where('user_id', $userId)
@@ -55,4 +68,4 @@ class OfficeRequestController extends Controller
             ->get();
         return response()->json($requests);
     }
-} 
+}
