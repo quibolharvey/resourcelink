@@ -11,6 +11,15 @@ class DashboardController extends Controller
 {
     public function index()
     {
+
+        $user = auth()->user();
+
+        if(!$user->hasRole('admin')){
+            return redirect()->back();
+        }
+
+        // dd('admin');
+
         // Get users with most expensive requests (total cost)
         $mostExpensiveUsers = OfficeRequest::with(['user', 'purchaseCart.items'])
             ->whereHas('purchaseCart', function($query) {
@@ -24,7 +33,7 @@ class DashboardController extends Controller
                         return $item->price * $item->quantity;
                     });
                 });
-                
+
                 return [
                     'user' => $requests->first()->user,
                     'total_cost' => $totalCost,
@@ -48,7 +57,7 @@ class DashboardController extends Controller
                         return $item->price * $item->quantity;
                     });
                 });
-                
+
                 return [
                     'user' => $requests->first()->user,
                     'request_count' => $requests->count(),
@@ -90,4 +99,4 @@ class DashboardController extends Controller
             ]
         ]);
     }
-} 
+}
