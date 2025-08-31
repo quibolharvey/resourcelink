@@ -65,6 +65,26 @@ const filteredItems = computed(() => {
     );
 });
 
+// --- Pull Out Modal Suggestions ---
+const showPullOutSuggestions = ref(false);
+const pullOutSuggestions = computed(() => {
+    if (!pullOutForm.description) return [];
+    return items.value.filter(item =>
+        item.description.toLowerCase().includes(pullOutForm.description.toLowerCase())
+    ).slice(0, 5); // Limit to 5 suggestions
+});
+
+const selectPullOutSuggestion = (item) => {
+    pullOutForm.description = item.description;
+    showPullOutSuggestions.value = false;
+};
+
+const handlePullOutBlur = () => {
+    setTimeout(() => {
+        showPullOutSuggestions.value = false;
+    }, 200);
+};
+
 // --- Actions (using useForm) ---
 
 // Add item to inventory
@@ -147,29 +167,40 @@ const openRequestModal = (item) => {
 };
 
 // Submit Request (Add to Cart)
-const submitRequest = () => {
-    // Ensure `requestForm.quantity` is bound to the modal input
-    requestForm.quantity = requestQuantity.value; // Assign value from ref to form object before submission
+const submitRequest = async () => {
+    try {
+        const response = await fetch('/api/purchase-cart/items', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            },
+            body: JSON.stringify({
+                inventory_item_id: requestForm.inventory_item_id,
+                unit: requestForm.unit,
+                description: requestForm.description,
+                quantity: requestQuantity.value,
+                price: requestForm.price,
+            }),
+        });
 
-    requestForm.post('/api/purchase-cart/items', { // Adjust route if needed
-        onSuccess: () => {
+        if (response.ok) {
             showRequestModal.value = false;
-            requestForm.reset(); // Reset the request form after submission
-            requestQuantity.value = 1; // Reset request quantity ref
-            // You might want a different notification system here,
-            // or rely on Inertia flash messages if your backend sends them.
-            // For now, using your existing success/error refs
+            requestForm.reset();
+            requestQuantity.value = 1;
             requestSuccess.value = true;
             requestError.value = '';
-            setTimeout(() => requestSuccess.value = false, 3000); // Hide after 3 seconds
-        },
-        onError: (errors) => {
-            console.error('Request item errors:', errors);
-            requestError.value = errors.message || 'Failed to add item to cart.';
-            setTimeout(() => requestError.value = '', 5000); // Hide after 5 seconds
-            // form.errors will be populated, but you also have requestError for general messages
-        },
-    });
+            setTimeout(() => requestSuccess.value = false, 3000);
+        } else {
+            const errorData = await response.json();
+            requestError.value = errorData.message || 'Failed to add item to cart.';
+            setTimeout(() => requestError.value = '', 5000);
+        }
+    } catch (error) {
+        console.error('Request item errors:', error);
+        requestError.value = 'Failed to add item to cart.';
+        setTimeout(() => requestError.value = '', 5000);
+    }
 };
 
 // Existing Go to Purchase Request
@@ -343,12 +374,33 @@ const requestQuantity = ref(1); // Keep this ref for the modal input binding
                     <form @submit.prevent="pullOut" class="p-6">
                         <h2 class="text-lg font-medium text-gray-900 mb-4">Pull Out Item</h2>
                         <div class="space-y-4">
-                            <div>
+                            <div class="relative">
                                 <label for="pullout-description" class="block text-sm font-medium text-gray-700">Item
                                     Description</label>
-                                <input v-model="pullOutForm.description" type="text" id="pullout-description"
+                                <input 
+                                    v-model="pullOutForm.description" 
+                                    type="text" 
+                                    id="pullout-description"
+                                    @focus="showPullOutSuggestions = true"
+                                    @blur="handlePullOutBlur"
                                     class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                    :class="{ 'border-red-500': pullOutForm.errors.description }" />
+                                    :class="{ 'border-red-500': pullOutForm.errors.description }" 
+                                    placeholder="Search items..." />
+                                
+                                <!-- Suggestions Dropdown -->
+                                <div v-if="showPullOutSuggestions && pullOutSuggestions.length > 0" 
+                                     class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                                    <div v-for="item in pullOutSuggestions" 
+                                         :key="item.id"
+                                         @mousedown="selectPullOutSuggestion(item)"
+                                         class="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0">
+                                        <div class="font-medium text-gray-900">{{ item.description }}</div>
+                                        <div class="text-sm text-gray-500">
+                                            Available: {{ item.quantity }} | Unit: {{ item.unit }}
+                                        </div>
+                                    </div>
+                                </div>
+                                
                                 <div v-if="pullOutForm.errors.description" class="text-red-500 text-sm mt-1">{{
                                     pullOutForm.errors.description }}</div>
                             </div>

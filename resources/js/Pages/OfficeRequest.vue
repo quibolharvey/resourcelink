@@ -75,6 +75,169 @@ const closeHistoryModal = () => {
     historyRequests.value = [];
     historyError.value = '';
 };
+
+const printRequest = () => {
+    try {
+        if (!selectedRequest.value) {
+            console.error('No request selected for printing');
+            return;
+        }
+        
+        if (!selectedRequest.value.purchase_cart || !selectedRequest.value.purchase_cart.items) {
+            console.error('No purchase cart items found');
+            return;
+        }
+        
+        const printWindow = window.open('', '_blank', 'width=800,height=600');
+        if (!printWindow) {
+            alert('Please allow pop-ups to print the request');
+            return;
+        }
+        
+        const printContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Purchase Request - ${selectedRequest.value.user?.name || 'Unknown'}</title>
+                <style>
+                    body { 
+                        font-family: Arial, sans-serif; 
+                        margin: 20px; 
+                        line-height: 1.6;
+                    }
+                    .header { 
+                        text-align: center; 
+                        margin-bottom: 30px; 
+                        border-bottom: 2px solid #1f2937;
+                        padding-bottom: 20px;
+                    }
+                    .header h1 { 
+                        color: #1f2937; 
+                        margin-bottom: 10px; 
+                        font-size: 24px;
+                    }
+                    .info { 
+                        margin-bottom: 20px; 
+                        background-color: #f9fafb;
+                        padding: 15px;
+                        border-radius: 5px;
+                    }
+                    .info span { 
+                        font-weight: bold; 
+                        color: #374151;
+                    }
+                    table { 
+                        width: 100%; 
+                        border-collapse: collapse; 
+                        margin-bottom: 20px; 
+                        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                    }
+                    th, td { 
+                        border: 1px solid #d1d5db; 
+                        padding: 12px 8px; 
+                        text-align: left; 
+                    }
+                    th { 
+                        background-color: #f3f4f6; 
+                        font-weight: bold; 
+                        color: #374151;
+                    }
+                    .total { 
+                        font-weight: bold; 
+                        background-color: #f3f4f6; 
+                        color: #1f2937;
+                    }
+                    .footer { 
+                        margin-top: 30px; 
+                        text-align: center; 
+                        font-size: 12px; 
+                        color: #6b7280; 
+                        border-top: 1px solid #e5e7eb;
+                        padding-top: 15px;
+                    }
+                    @media print {
+                        body { margin: 0; }
+                        .no-print { display: none; }
+                        table { box-shadow: none; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>Purchase Request</h1>
+                    <p><strong>Resource Link Management System</strong></p>
+                </div>
+                
+                <div class="info">
+                    <p><span>Requested by:</span> ${selectedRequest.value.user?.name || 'Unknown'}</p>
+                    <p><span>Request Date:</span> ${new Date(selectedRequest.value.created_at).toLocaleDateString()}</p>
+                    <p><span>Status:</span> ${selectedRequest.value.purchase_cart?.status || 'Pending'}</p>
+                </div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Unit</th>
+                            <th>Description</th>
+                            <th>Quantity</th>
+                            <th>Unit Price</th>
+                            <th>Total Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${selectedRequest.value.purchase_cart.items.map(item => `
+                            <tr>
+                                <td>${item.unit || ''}</td>
+                                <td>${item.description || ''}</td>
+                                <td>${item.quantity || 0}</td>
+                                <td>₱ ${parseFloat(item.price || 0).toFixed(2)}</td>
+                                <td>₱ ${(parseFloat(item.price || 0) * parseFloat(item.quantity || 0)).toFixed(2)}</td>
+                            </tr>
+                        `).join('')}
+                        <tr class="total">
+                            <td colspan="4" style="text-align: right;"><strong>Grand Total:</strong></td>
+                            <td><strong>₱ ${selectedRequest.value.purchase_cart.items.reduce((sum, item) => sum + (parseFloat(item.price || 0) * parseFloat(item.quantity || 0)), 0).toFixed(2)}</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div class="footer">
+                    <p>Generated on ${new Date().toLocaleString()}</p>
+                    <p>Resource Link Management System - Purchase Request</p>
+                </div>
+            </body>
+            </html>
+        `;
+        
+        printWindow.document.write(printContent);
+        printWindow.document.close();
+        
+        // Wait for content to load before printing
+        printWindow.onload = function() {
+            printWindow.focus();
+            printWindow.print();
+            // Close window after printing (with a small delay)
+            setTimeout(() => {
+                printWindow.close();
+            }, 1000);
+        };
+        
+        // Fallback if onload doesn't work
+        setTimeout(() => {
+            if (!printWindow.closed) {
+                printWindow.focus();
+                printWindow.print();
+                setTimeout(() => {
+                    printWindow.close();
+                }, 1000);
+            }
+        }, 500);
+        
+    } catch (error) {
+        console.error('Error printing request:', error);
+        alert('Error printing request. Please try again.');
+    }
+};
 </script>
 
 <template>
@@ -206,6 +369,19 @@ const closeHistoryModal = () => {
                             </tr>
                         </tbody>
                     </table>
+                    
+                    <!-- Print Button -->
+                    <div class="flex justify-end mt-6">
+                        <button
+                            @click="printRequest"
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-sm transition-colors flex items-center gap-2"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                            </svg>
+                            Print Request
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
