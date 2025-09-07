@@ -40,120 +40,160 @@ const closeModal = () => {
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="text-2xl font-bold text-gray-800 tracking-tight">
-                Request History
-            </h2>
-        </template>
-
-        <div class="py-6">
-            <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                <div class="overflow-hidden bg-white shadow-md rounded-lg border border-gray-200">
-                    <table class="w-full text-left border-collapse">
-                        <thead class="bg-blue-50 text-black">
-                            <tr>
-                                <th class="py-3 px-4 font-semibold uppercase text-sm">Name</th>
-                                <th class="py-3 px-4 font-semibold uppercase text-sm">Purchase Request</th>
-                                <th class="py-3 px-4 font-semibold uppercase text-sm">Request Date</th>
-                                <th class="py-3 px-4 font-semibold uppercase text-sm">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr
-                                v-for="req in requests"
-                                :key="req.id"
-                                class="hover:bg-blue-50 transition-colors even:bg-gray-50"
-                            >
-                                <td class="py-3 px-4 italic text-gray-800">{{ req.user?.name }}</td>
-                                <td class="py-3 px-4">
-                                    <button
-                                        @click="openModal(req.id)"
-                                        class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-1 rounded-md shadow-sm transition"
-                                    >
-                                        View
-                                    </button>
-                                </td>
-                                <td class="py-3 px-4 text-gray-700">
-                                    {{ new Date(req.created_at).toLocaleDateString() }}
-                                </td>
-                                <td class="py-3 px-4">
-                                    <span
-                                        class="px-3 py-1 text-xs font-semibold rounded-full"
-                                        :class="{
-                                            'bg-green-100 text-green-700': req.purchase_cart?.status === 'Approved',
-                                            'bg-yellow-100 text-yellow-700': req.purchase_cart?.status === 'Pending',
-                                            'bg-red-100 text-red-700': req.purchase_cart?.status === 'Rejected',
-                                            'bg-gray-200 text-gray-700': !req.purchase_cart?.status
-                                        }"
-                                    >
-                                        {{ req.purchase_cart?.status || 'Unknown' }}
-                                    </span>
-                                </td>
-                            </tr>
-                            <tr v-if="requests.length === 0">
-                                <td colspan="4" class="text-center py-6 text-gray-500">
-                                    No requests found.
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-3xl font-bold text-gray-900 tracking-tight">
+                        Request History
+                    </h2>
+                    <p class="mt-1 text-sm text-gray-600">
+                        View and manage all your purchase requests
+                    </p>
+                </div>
+                <div class="hidden sm:flex items-center space-x-2 text-sm text-gray-500">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                    </svg>
+                    <span>{{ requests.length }} total requests</span>
                 </div>
             </div>
-        </div>
+        </template>
 
-        <!-- Modal -->
-        <div
-            v-if="showModal"
-            class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-        >
-            <div class="bg-white rounded-lg p-6 w-full max-w-lg relative shadow-xl">
-                <button
-                    @click="closeModal"
-                    class="absolute top-3 right-3 text-gray-500 hover:text-black text-2xl leading-none"
-                >
-                    &times;
-                </button>
-
-                <h3 class="text-xl font-bold mb-4 border-b pb-2">Purchase Request Details</h3>
-
-                <div v-if="modalLoading" class="text-gray-500 text-center py-4">
-                    Loading...
-                </div>
-
-                <div v-else-if="modalError" class="text-red-500 text-center py-4">
-                    {{ modalError }}
-                </div>
-
-                <div v-else-if="selectedRequest">
-                    <div class="mb-3">
-                        <span class="font-semibold">Requested by:</span>
-                        {{ selectedRequest.user?.name }}
-                    </div>
-                    <div class="mb-3">
-                        <span class="font-semibold">Request Date:</span>
-                        {{ new Date(selectedRequest.created_at).toLocaleDateString() }}
+        <div class="py-8">
+            <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                <!-- Enhanced Card Container -->
+                <div class="bg-white shadow-xl rounded-2xl border border-gray-100 overflow-hidden">
+                    <!-- Card Header -->
+                    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-lg font-semibold text-gray-900">Purchase Requests</h3>
+                            <div class="flex items-center space-x-2">
+                                <div class="h-2 w-2 bg-green-400 rounded-full"></div>
+                                <span class="text-xs text-gray-500 font-medium">Live Data</span>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="mb-3 font-semibold">Items:</div>
-                    <div class="overflow-x-auto border rounded-lg">
-                        <table class="w-full text-left">
-                            <thead class="bg-gray-100">
+                    <!-- Enhanced Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gradient-to-r from-gray-50 to-gray-100">
                                 <tr>
-                                    <th class="py-2 px-3 font-bold">Unit</th>
-                                    <th class="py-2 px-3 font-bold">Description</th>
-                                    <th class="py-2 px-3 font-bold">Quantity</th>
-                                    <th class="py-2 px-3 font-bold">Unit Price</th>
+                                    <th class="py-4 px-6 text-left font-semibold text-gray-700 uppercase text-xs tracking-wider">
+                                        <div class="flex items-center space-x-1">
+                                            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                            </svg>
+                                            <span>Requestor</span>
+                                        </div>
+                                    </th>
+                                    <th class="py-4 px-6 text-left font-semibold text-gray-700 uppercase text-xs tracking-wider">
+                                        <div class="flex items-center space-x-1">
+                                            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                            </svg>
+                                            <span>Purchase Request</span>
+                                        </div>
+                                    </th>
+                                    <th class="py-4 px-6 text-left font-semibold text-gray-700 uppercase text-xs tracking-wider">
+                                        <div class="flex items-center space-x-1">
+                                            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3a4 4 0 118 0v4m-4 8v2m-4 0V11a1 1 0 011-1h6a1 1 0 011 1v8a1 1 0 01-1 1H7a1 1 0 01-1-1z"></path>
+                                            </svg>
+                                            <span>Request Date</span>
+                                        </div>
+                                    </th>
+                                    <th class="py-4 px-6 text-left font-semibold text-gray-700 uppercase text-xs tracking-wider">
+                                        <div class="flex items-center space-x-1">
+                                            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                            </svg>
+                                            <span>Status</span>
+                                        </div>
+                                    </th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody class="divide-y divide-gray-100">
                                 <tr
-                                    v-for="item in selectedRequest.purchase_cart.items"
-                                    :key="item.id"
-                                    class="even:bg-gray-50"
+                                    v-for="req in requests"
+                                    :key="req.id"
+                                    class="hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200 group"
                                 >
-                                    <td class="py-2 px-3">{{ item.unit }}</td>
-                                    <td class="py-2 px-3">{{ item.description }}</td>
-                                    <td class="py-2 px-3">{{ item.quantity }}</td>
-                                    <td class="py-2 px-3">₱ {{ item.price }}</td>
+                                    <td class="py-4 px-6">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
+                                                <span class="text-white font-semibold text-sm">
+                                                    {{ req.user?.name?.charAt(0).toUpperCase() }}
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <p class="font-medium text-gray-900">{{ req.user?.name }}</p>
+                                                <p class="text-sm text-gray-500">ID: #{{ req.id }}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="py-4 px-6">
+                                        <button
+                                            @click="openModal(req.id)"
+                                            class="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 font-medium text-sm group-hover:scale-105"
+                                        >
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                            </svg>
+                                            <span>View Details</span>
+                                        </button>
+                                    </td>
+                                    <td class="py-4 px-6">
+                                        <div class="flex items-center space-x-2">
+                                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3a4 4 0 118 0v4m-4 8v2m-6-4h12a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2v-6a2 2 0 012-2z"></path>
+                                            </svg>
+                                            <span class="text-gray-700 font-medium">
+                                                {{ new Date(req.created_at).toLocaleDateString('en-US', { 
+                                                    year: 'numeric', 
+                                                    month: 'short', 
+                                                    day: 'numeric' 
+                                                }) }}
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td class="py-4 px-6">
+                                        <span
+                                            class="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full shadow-sm"
+                                            :class="{
+                                                'bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 border border-green-200': req.purchase_cart?.status === 'Approved',
+                                                'bg-gradient-to-r from-yellow-100 to-amber-100 text-yellow-800 border border-yellow-200': req.purchase_cart?.status === 'Pending',
+                                                'bg-gradient-to-r from-red-100 to-rose-100 text-red-800 border border-red-200': req.purchase_cart?.status === 'Rejected',
+                                                'bg-gradient-to-r from-gray-100 to-slate-100 text-gray-700 border border-gray-200': !req.purchase_cart?.status
+                                            }"
+                                        >
+                                            <div
+                                                class="w-2 h-2 rounded-full mr-2"
+                                                :class="{
+                                                    'bg-green-500': req.purchase_cart?.status === 'Approved',
+                                                    'bg-yellow-500': req.purchase_cart?.status === 'Pending',
+                                                    'bg-red-500': req.purchase_cart?.status === 'Rejected',
+                                                    'bg-gray-400': !req.purchase_cart?.status
+                                                }"
+                                            ></div>
+                                            {{ req.purchase_cart?.status || 'Unknown' }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr v-if="requests.length === 0">
+                                    <td colspan="4" class="text-center py-12">
+                                        <div class="flex flex-col items-center justify-center space-y-4">
+                                            <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                                                <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                                </svg>
+                                            </div>
+                                            <div class="text-center">
+                                                <h3 class="text-lg font-medium text-gray-900 mb-1">No requests found</h3>
+                                                <p class="text-gray-500">You haven't made any purchase requests yet.</p>
+                                            </div>
+                                        </div>
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -161,5 +201,179 @@ const closeModal = () => {
                 </div>
             </div>
         </div>
+
+        <!-- Enhanced Modal -->
+        <div
+            v-if="showModal"
+            class="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            @click.self="closeModal"
+        >
+            <div class="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl transform transition-all duration-300 scale-100">
+                <!-- Modal Header -->
+                <div class="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-bold text-white">Purchase Request Details</h3>
+                    </div>
+                    <button
+                        @click="closeModal"
+                        class="text-white hover:text-gray-200 transition-colors p-2 hover:bg-white hover:bg-opacity-20 rounded-lg"
+                    >
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Modal Content -->
+                <div class="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+                    <!-- Loading State -->
+                    <div v-if="modalLoading" class="flex flex-col items-center justify-center py-12 space-y-4">
+                        <div class="animate-spin w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full"></div>
+                        <p class="text-gray-600 font-medium">Loading request details...</p>
+                    </div>
+
+                    <!-- Error State -->
+                    <div v-else-if="modalError" class="flex flex-col items-center justify-center py-12 space-y-4">
+                        <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+                            <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <div class="text-center">
+                            <h3 class="text-lg font-medium text-gray-900 mb-1">Failed to Load</h3>
+                            <p class="text-red-600">{{ modalError }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Content -->
+                    <div v-else-if="selectedRequest" class="space-y-6">
+                        <!-- Request Info Cards -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-medium text-blue-600">Requested by</p>
+                                        <p class="font-semibold text-gray-900">{{ selectedRequest.user?.name }}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border border-green-100">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
+                                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3a4 4 0 118 0v4m-4 8v2m-6-4h12a2 2 0 012 2v6a2 2 0 01-2-2v-6a2 2 0 012-2z"></path>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-medium text-green-600">Request Date</p>
+                                        <p class="font-semibold text-gray-900">
+                                            {{ new Date(selectedRequest.created_at).toLocaleDateString('en-US', { 
+                                                year: 'numeric', 
+                                                month: 'long', 
+                                                day: 'numeric' 
+                                            }) }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Items Section -->
+                        <div class="bg-gray-50 rounded-xl p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <h4 class="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+                                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                                    </svg>
+                                    <span>Requested Items</span>
+                                </h4>
+                                <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded-full">
+                                    {{ selectedRequest.purchase_cart.items.length }} item(s)
+                                </span>
+                            </div>
+                            
+                            <div class="bg-white rounded-lg overflow-hidden shadow-sm border border-gray-200">
+                                <table class="w-full">
+                                    <thead class="bg-gradient-to-r from-gray-100 to-gray-50">
+                                        <tr>
+                                            <th class="py-3 px-4 text-left font-semibold text-gray-700 text-sm">Unit</th>
+                                            <th class="py-3 px-4 text-left font-semibold text-gray-700 text-sm">Description</th>
+                                            <th class="py-3 px-4 text-left font-semibold text-gray-700 text-sm">Quantity</th>
+                                            <th class="py-3 px-4 text-left font-semibold text-gray-700 text-sm">Unit Price</th>
+                                            <th class="py-3 px-4 text-left font-semibold text-gray-700 text-sm">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-100">
+                                        <tr
+                                            v-for="item in selectedRequest.purchase_cart.items"
+                                            :key="item.id"
+                                            class="hover:bg-gray-50 transition-colors"
+                                        >
+                                            <td class="py-3 px-4 font-medium text-gray-900">{{ item.unit }}</td>
+                                            <td class="py-3 px-4 text-gray-700">{{ item.description }}</td>
+                                            <td class="py-3 px-4 text-center font-medium text-gray-900">{{ item.quantity }}</td>
+                                            <td class="py-3 px-4 font-medium text-gray-900">₱{{ Number(item.price).toLocaleString() }}</td>
+                                            <td class="py-3 px-4 font-bold text-blue-600">₱{{ (item.quantity * item.price).toLocaleString() }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Total Summary -->
+                            <div class="mt-4 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg p-4">
+                                <div class="flex justify-between items-center text-white">
+                                    <span class="text-lg font-semibold">Total Amount:</span>
+                                    <span class="text-2xl font-bold">
+                                        ₱{{ selectedRequest.purchase_cart.items.reduce((sum, item) => sum + (item.quantity * item.price), 0).toLocaleString() }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </AuthenticatedLayout>
 </template>
+
+<style scoped>
+/* Additional custom styles for enhanced animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.group:hover .group-hover\:scale-105 {
+  transform: scale(1.05);
+}
+
+/* Smooth scrollbar for modal content */
+.overflow-y-auto::-webkit-scrollbar {
+  width: 6px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+</style>
