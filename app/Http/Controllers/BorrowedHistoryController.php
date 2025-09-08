@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\BorrowedHistory;
+use App\Models\BorrowRequest;
 use Illuminate\Http\Request;
 
 class BorrowedHistoryController extends Controller
@@ -21,6 +22,18 @@ class BorrowedHistoryController extends Controller
         $history = \App\Models\BorrowedHistory::findOrFail($id);
         $history->status = $request->status;
         $history->save();
+
+        // Sync the corresponding borrow request status so admin view updates
+        BorrowRequest::where('user_id', $history->user_id)
+            ->where('item_id', $history->item_id)
+            ->where(function ($q) use ($history) {
+                // Prefer exact expected return match if available
+                $q->where('expected_return', $history->expected_return_date)
+                  ->orWhereIn('status', ['accepted', 'returned', 'overdue']);
+            })
+            ->orderByDesc('id')
+            ->limit(1)
+            ->update(['status' => $request->status]);
         return redirect()->back();
     }
 }

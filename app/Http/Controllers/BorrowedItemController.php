@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\BorrowedItem;
+use App\Models\BorrowRequest;
 use Illuminate\Http\Request;
 
 class BorrowedItemController extends Controller
@@ -12,11 +13,43 @@ class BorrowedItemController extends Controller
      */
     public function index()
     {
-        $borrowedItems = BorrowedItem::with(['user', 'item', 'borrowRequest'])
-            ->where('user_id', auth()->id())
-            ->get();
+        $userId = auth()->id();
+
+        // Accepted/active borrowed items
+        $accepted = BorrowedItem::with(['user', 'item'])
+            ->where('user_id', $userId)
+            ->get()
+            ->map(function ($bi) {
+                return [
+                    'id' => 'bor-' . $bi->id,
+                    'item' => $bi->item,
+                    'quantity' => $bi->quantity,
+                    'expected_return_date' => $bi->expected_return_date,
+                    'user' => $bi->user,
+                    'status' => $bi->status ?? 'accepted',
+                ];
+            });
+
+        // Pending borrow requests
+        $pending = BorrowRequest::with(['user', 'item'])
+            ->where('user_id', $userId)
+            ->where('status', 'pending')
+            ->get()
+            ->map(function ($br) {
+                return [
+                    'id' => 'req-' . $br->id,
+                    'item' => $br->item,
+                    'quantity' => $br->quantity,
+                    'expected_return_date' => $br->expected_return, // normalize field name
+                    'user' => $br->user,
+                    'status' => 'pending',
+                ];
+            });
+
+        $combined = $pending->concat($accepted)->values();
+
         return inertia('BorrowedItem', [
-            'borrowedItems' => $borrowedItems,
+            'borrowedItems' => $combined,
         ]);
     }
 
