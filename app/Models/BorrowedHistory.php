@@ -12,6 +12,7 @@ class BorrowedHistory extends Model
         'quantity',
         'expected_return_date',
         'status',
+        'borrowed_item_id',
     ];
 
     public function user()
@@ -22,5 +23,10 @@ class BorrowedHistory extends Model
     public function item()
     {
         return $this->belongsTo(ItemManagement::class, 'item_id');
+    }
+
+    public function borrowedItem()
+    {
+        return $this->belongsTo(BorrowedItem::class);
     }
 }

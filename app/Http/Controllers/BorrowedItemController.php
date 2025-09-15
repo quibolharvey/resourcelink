@@ -26,7 +26,7 @@ class BorrowedItemController extends Controller
                     'quantity' => $bi->quantity,
                     'expected_return_date' => $bi->expected_return_date,
                     'user' => $bi->user,
-                    'status' => $bi->status ?? 'accepted',
+                    'status' => $bi->status,
                 ];
             });
 

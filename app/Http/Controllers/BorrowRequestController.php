@@ -51,18 +51,21 @@ public function updateStatus(Request $request, $id)
 
     // If accepted, create a BorrowedItem and a BorrowedHistory
     if ($request->status === 'accepted') {
-        BorrowedItem::create([
+        $borrowedItem = BorrowedItem::create([
             'user_id' => $borrow->user_id,
             'item_id' => $borrow->item_id,
             'quantity' => $borrow->quantity,
             'expected_return_date' => $borrow->expected_return,
+            'status' => $borrow->status,
         ]);
+        
         BorrowedHistory::create([
             'user_id' => $borrow->user_id,
             'item_id' => $borrow->item_id,
             'quantity' => $borrow->quantity,
             'expected_return_date' => $borrow->expected_return,
             'status' => $borrow->status,
+            'borrowed_item_id' => $borrowedItem->id,
         ]);
         // Deduct the borrowed quantity from the item's quantity
         $item = ItemManagement::find($borrow->item_id);

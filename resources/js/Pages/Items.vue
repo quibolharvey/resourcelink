@@ -16,19 +16,44 @@ const form = useForm({
   expected_return: '',
 });
 
+const quantityError = ref('');
+
 const openBorrowModal = (item) => {
   selectedItem.value = item;
   form.item_id = item.id;
   form.quantity = 1;
   form.expected_return = '';
+  quantityError.value = '';
   showModal.value = true;
 };
 
+const validateQuantity = () => {
+  if (!selectedItem.value) return;
+  
+  if (form.quantity > selectedItem.value.quantity) {
+    quantityError.value = `Cannot borrow more than ${selectedItem.value.quantity} items (available in stock)`;
+    return false;
+  }
+  
+  if (form.quantity < 1) {
+    quantityError.value = 'Quantity must be at least 1';
+    return false;
+  }
+  
+  quantityError.value = '';
+  return true;
+};
+
 const submitBorrow = () => {
+  if (!validateQuantity()) {
+    return;
+  }
+  
   form.post(route('borrow.store'), {
     onSuccess: () => {
       showModal.value = false;
       form.reset();
+      quantityError.value = '';
     },
   });
 };
@@ -210,15 +235,28 @@ const submitBorrow = () => {
                 <input
                   type="number"
                   v-model="form.quantity"
+                  @input="validateQuantity"
                   min="1"
                   :max="selectedItem?.quantity"
                   id="quantity"
                   required
-                  class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all duration-200 text-lg font-medium"
+                  :class="[
+                    'w-full border-2 rounded-xl px-4 py-3 focus:ring-2 focus:outline-none transition-all duration-200 text-lg font-medium',
+                    quantityError 
+                      ? 'border-red-300 focus:ring-red-500 focus:border-red-500 bg-red-50' 
+                      : 'border-gray-200 focus:ring-emerald-500 focus:border-emerald-500'
+                  ]"
                 />
                 <div class="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">
                   / {{ selectedItem?.quantity }}
                 </div>
+              </div>
+              <!-- Error Message -->
+              <div v-if="quantityError" class="flex items-center space-x-2 text-red-600 text-sm">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span>{{ quantityError }}</span>
               </div>
             </div>
 
