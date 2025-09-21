@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
     borrowedHistories: {
@@ -11,6 +11,10 @@ const props = defineProps({
 });
 
 const statusOptions = ['accepted', 'returned', 'overdue'];
+
+// Pagination state
+const currentPage = ref(1);
+const itemsPerPage = 10;
 
 const updateStatus = (id, status) => {
     router.patch(route('borrowedhistory.update', id), { status });
@@ -38,20 +42,45 @@ const formatDate = (dateString) => {
     });
 };
 
-// Sort borrowed histories with returned items at the bottom
+// Sort borrowed histories with newest records at the top
 const sortedBorrowedHistories = computed(() => {
     return [...props.borrowedHistories].sort((a, b) => {
-        // If both have the same status, maintain original order
-        if (a.status === b.status) return 0;
-        
-        // Returned items go to the bottom
-        if (a.status === 'returned') return 1;
-        if (b.status === 'returned') return -1;
-        
-        // For other statuses, maintain original order
-        return 0;
+        // Sort by creation date (newest first)
+        const dateA = new Date(a.created_at || a.id);
+        const dateB = new Date(b.created_at || b.id);
+        return dateB - dateA; // Descending order (newest first)
     });
 });
+
+// Pagination computed properties
+const totalPages = computed(() => {
+    return Math.ceil(sortedBorrowedHistories.value.length / itemsPerPage);
+});
+
+const paginatedHistories = computed(() => {
+    const start = (currentPage.value - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    return sortedBorrowedHistories.value.slice(start, end);
+});
+
+// Pagination methods
+const goToPage = (page) => {
+    if (page >= 1 && page <= totalPages.value) {
+        currentPage.value = page;
+    }
+};
+
+const goToPreviousPage = () => {
+    if (currentPage.value > 1) {
+        currentPage.value--;
+    }
+};
+
+const goToNextPage = () => {
+    if (currentPage.value < totalPages.value) {
+        currentPage.value++;
+    }
+};
 </script>
 
 <template>
@@ -181,7 +210,7 @@ const sortedBorrowedHistories = computed(() => {
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-100">
-                                    <tr v-for="history in sortedBorrowedHistories" :key="history.id"
+                                    <tr v-for="history in paginatedHistories" :key="history.id"
                                         class="hover:bg-gray-50 transition-all duration-200 group">
                                         <!-- Item Details -->
                                         <td class="px-6 py-6">
@@ -276,6 +305,70 @@ const sortedBorrowedHistories = computed(() => {
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+
+                        <!-- Pagination Controls -->
+                        <div v-if="totalPages > 1" class="mt-8 flex items-center justify-between border-t border-gray-200 pt-6">
+                            <div class="flex items-center text-sm text-gray-700">
+                                <span class="mr-2">Showing</span>
+                                <span class="font-medium">{{ (currentPage - 1) * itemsPerPage + 1 }}</span>
+                                <span class="mx-1">to</span>
+                                <span class="font-medium">{{ Math.min(currentPage * itemsPerPage, sortedBorrowedHistories.length) }}</span>
+                                <span class="ml-1">of</span>
+                                <span class="font-medium ml-1">{{ sortedBorrowedHistories.length }}</span>
+                                <span class="ml-1">results</span>
+                            </div>
+                            
+                            <div class="flex items-center space-x-2">
+                                <!-- Previous Button -->
+                                <button
+                                    @click="goToPreviousPage"
+                                    :disabled="currentPage === 1"
+                                    :class="[
+                                        'px-3 py-2 text-sm font-medium rounded-lg border transition-colors duration-200',
+                                        currentPage === 1
+                                            ? 'border-gray-200 text-gray-400 cursor-not-allowed bg-gray-50'
+                                            : 'border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400'
+                                    ]"
+                                >
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                                    </svg>
+                                </button>
+
+                                <!-- Page Numbers -->
+                                <div class="flex items-center space-x-1">
+                                    <button
+                                        v-for="page in totalPages"
+                                        :key="page"
+                                        @click="goToPage(page)"
+                                        :class="[
+                                            'px-3 py-2 text-sm font-medium rounded-lg border transition-colors duration-200',
+                                            currentPage === page
+                                                ? 'bg-blue-600 text-white border-blue-600'
+                                                : 'border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400'
+                                        ]"
+                                    >
+                                        {{ page }}
+                                    </button>
+                                </div>
+
+                                <!-- Next Button -->
+                                <button
+                                    @click="goToNextPage"
+                                    :disabled="currentPage === totalPages"
+                                    :class="[
+                                        'px-3 py-2 text-sm font-medium rounded-lg border transition-colors duration-200',
+                                        currentPage === totalPages
+                                            ? 'border-gray-200 text-gray-400 cursor-not-allowed bg-gray-50'
+                                            : 'border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400'
+                                    ]"
+                                >
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -1,6 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
+import { ref, computed } from 'vue';
 
 const props = defineProps({
   borrowedItems: {
@@ -8,6 +9,45 @@ const props = defineProps({
     default: () => []
   }
 });
+
+const searchTerm = ref('');
+
+// Filter borrow requests based on search term
+const filteredBorrowedItems = computed(() => {
+  if (!searchTerm.value.trim()) {
+    return props.borrowedItems;
+  }
+  
+  const term = searchTerm.value.toLowerCase().trim();
+  return props.borrowedItems.filter(borrow => 
+    borrow.item?.name?.toLowerCase().includes(term) ||
+    borrow.user?.name?.toLowerCase().includes(term) ||
+    borrow.user?.email?.toLowerCase().includes(term) ||
+    borrow.status?.toLowerCase().includes(term) ||
+    borrow.user?.address?.toLowerCase().includes(term)
+  );
+});
+
+// Calculate available stock for each item
+const getAvailableStock = (itemId) => {
+  const item = props.borrowedItems.find(borrow => borrow.item?.id === itemId)?.item;
+  if (!item) return 0;
+  
+  // Get total quantity already accepted for this item
+  const acceptedQuantity = props.borrowedItems
+    .filter(borrow => borrow.item?.id === itemId && borrow.status === 'accepted')
+    .reduce((total, borrow) => total + (borrow.quantity || 0), 0);
+  
+  return item.quantity - acceptedQuantity;
+};
+
+// Check if a borrow request can be accepted
+const canAcceptRequest = (borrow) => {
+  if (borrow.status === 'accepted') return false;
+  
+  const availableStock = getAvailableStock(borrow.item?.id);
+  return availableStock >= borrow.quantity;
+};
 
 const updateStatus = (id, status) => {
   router.patch(route('borrowrequest.update', id), { status });
@@ -116,6 +156,28 @@ const formatDate = (dateString) => {
           </div> -->
         </div>
 
+        <!-- Search Bar -->
+        <div class="bg-white/70 backdrop-blur-md rounded-2xl shadow-sm border border-white/20 p-6 mb-8">
+          <div class="flex flex-col sm:flex-row gap-4 items-center justify-between">
+            <div class="relative flex-1 max-w-md">
+              <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              </svg>
+              <input 
+                type="text" 
+                v-model="searchTerm"
+                placeholder="Search requests." 
+                class="w-full pl-10 pr-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 placeholder-gray-500"
+              />
+            </div>
+            <div class="flex items-center space-x-2 text-sm text-gray-600">
+              <span class="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full font-medium">
+                {{ filteredBorrowedItems.length }} {{ searchTerm ? 'requests found' : 'total requests' }}
+              </span>
+            </div>
+          </div>
+        </div>
+
         <!-- Enhanced Table -->
         <div class="bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
           <!-- Table Header -->
@@ -124,7 +186,7 @@ const formatDate = (dateString) => {
               <h3 class="text-lg font-semibold text-gray-900">Borrow Requests</h3>
               <div class="text-sm text-gray-600">
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 mr-2">
-                  {{ borrowedItems.filter(item => item.status === 'pending').length }} Pending
+                  {{ filteredBorrowedItems.filter(item => item.status === 'pending').length }} Pending
                 </span>
                 Review required
               </div>
@@ -132,13 +194,24 @@ const formatDate = (dateString) => {
           </div>
           
           <div class="overflow-x-auto">
-            <div v-if="borrowedItems.length === 0" class="text-center py-12">
+            <div v-if="filteredBorrowedItems.length === 0" class="text-center py-12">
               <div class="flex flex-col items-center">
                 <svg class="w-12 h-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                 </svg>
-                <p class="text-lg font-medium text-gray-900">No requests found</p>
-                <p class="text-gray-500 mt-1">New borrow requests will appear here when submitted</p>
+                <p class="text-lg font-medium text-gray-900">
+                  {{ searchTerm ? 'No requests found' : 'No requests available' }}
+                </p>
+                <p class="text-gray-500 mt-1">
+                  {{ searchTerm ? `No requests match "${searchTerm}". Try a different search term.` : 'New borrow requests will appear here when submitted' }}
+                </p>
+                <button 
+                  v-if="searchTerm"
+                  @click="searchTerm = ''"
+                  class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                >
+                  Clear Search
+                </button>
               </div>
             </div>
 
@@ -150,6 +223,9 @@ const formatDate = (dateString) => {
                   </th>
                   <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Quantity
+                  </th>
+                  <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Available Stock
                   </th>
                   <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Return Date
@@ -169,7 +245,7 @@ const formatDate = (dateString) => {
                 </tr>
               </thead>
               <tbody class="bg-white divide-y divide-gray-100">
-                <tr v-for="borrow in borrowedItems" :key="borrow.id" class="hover:bg-gray-50 transition-colors duration-150">
+                <tr v-for="borrow in filteredBorrowedItems" :key="borrow.id" class="hover:bg-gray-50 transition-colors duration-150">
                   <!-- Item Details -->
                   <td class="px-6 py-4">
                     <div class="flex items-center">
@@ -190,6 +266,28 @@ const formatDate = (dateString) => {
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                       {{ borrow.quantity }}
                     </span>
+                  </td>
+
+                  <!-- Available Stock -->
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center space-x-2">
+                      <span 
+                        :class="[
+                          'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
+                          getAvailableStock(borrow.item?.id) >= borrow.quantity 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-red-100 text-red-800'
+                        ]"
+                      >
+                        {{ getAvailableStock(borrow.item?.id) }}
+                      </span>
+                      <span class="text-xs text-gray-500">
+                        / {{ borrow.item?.quantity || 0 }}
+                      </span>
+                    </div>
+                    <div v-if="!canAcceptRequest(borrow) && borrow.status === 'pending'" class="text-xs text-red-600 mt-1">
+                      Insufficient stock
+                    </div>
                   </td>
 
                   <!-- Return Date -->
@@ -260,13 +358,18 @@ const formatDate = (dateString) => {
                     <div class="flex items-center justify-center space-x-2">
                       <button
                         @click="updateStatus(borrow.id, 'accepted')"
-                        :disabled="borrow.status === 'accepted'"
-                        class="inline-flex items-center px-3 py-1.5 bg-green-50 text-green-700 text-sm font-medium rounded-lg hover:bg-green-100 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                        :disabled="borrow.status === 'accepted' || !canAcceptRequest(borrow)"
+                        :class="[
+                          'inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg transition-colors duration-150',
+                          borrow.status === 'accepted' || !canAcceptRequest(borrow)
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            : 'bg-green-50 text-green-700 hover:bg-green-100'
+                        ]"
                       >
                         <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                         </svg>
-                        Accept
+                        {{ !canAcceptRequest(borrow) && borrow.status === 'pending' ? 'No Stock' : 'Accept' }}
                       </button>
                       <button
                         @click="updateStatus(borrow.id, 'rejected')"

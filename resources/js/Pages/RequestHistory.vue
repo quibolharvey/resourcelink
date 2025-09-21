@@ -1,10 +1,36 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, usePage } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 
 const page = usePage();
 const requests = page.props.requests || [];
+
+// --- Pagination State ---
+const currentPage = ref(1);
+const itemsPerPage = 10;
+
+// --- Pagination Computed Properties ---
+const totalItems = computed(() => requests.length);
+const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage));
+
+const paginatedRequests = computed(() => {
+    const start = (currentPage.value - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    return requests.slice(start, end);
+});
+
+// --- Pagination Navigation Functions ---
+const goToPage = (page) => {
+    if (page >= 1 && page <= totalPages.value) {
+        currentPage.value = page;
+    }
+};
+
+const goToFirstPage = () => goToPage(1);
+const goToLastPage = () => goToPage(totalPages.value);
+const goToPreviousPage = () => goToPage(currentPage.value - 1);
+const goToNextPage = () => goToPage(currentPage.value + 1);
 
 const showModal = ref(false);
 const modalLoading = ref(false);
@@ -53,7 +79,7 @@ const closeModal = () => {
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                     </svg>
-                    <span>{{ requests.length }} total requests</span>
+                    <span>{{ totalItems }} total requests</span>
                 </div>
             </div>
         </template>
@@ -114,7 +140,7 @@ const closeModal = () => {
                             </thead>
                             <tbody class="divide-y divide-gray-100">
                                 <tr
-                                    v-for="req in requests"
+                                    v-for="req in paginatedRequests"
                                     :key="req.id"
                                     class="hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200 group"
                                 >
@@ -180,7 +206,7 @@ const closeModal = () => {
                                         </span>
                                     </td>
                                 </tr>
-                                <tr v-if="requests.length === 0">
+                                <tr v-if="totalItems === 0">
                                     <td colspan="4" class="text-center py-12">
                                         <div class="flex flex-col items-center justify-center space-y-4">
                                             <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
@@ -197,6 +223,91 @@ const closeModal = () => {
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+
+                    <!-- Pagination Controls -->
+                    <div v-if="totalPages > 1" class="bg-white px-6 py-4 border-t border-gray-200">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center text-sm text-gray-700">
+                                <span>Page {{ currentPage }} of {{ totalPages }}</span>
+                            </div>
+                            
+                            <div class="flex items-center space-x-2">
+                                <!-- First Page Button -->
+                                <button 
+                                    @click="goToFirstPage"
+                                    :disabled="currentPage === 1"
+                                    class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+                                >
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>
+                                    </svg>
+                                </button>
+                                
+                                <!-- Previous Page Button -->
+                                <button 
+                                    @click="goToPreviousPage"
+                                    :disabled="currentPage === 1"
+                                    class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+                                >
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                                    </svg>
+                                </button>
+                                
+                                <!-- Page Numbers -->
+                                <div class="flex items-center space-x-1">
+                                    <template v-for="page in Math.min(5, totalPages)" :key="page">
+                                        <button 
+                                            v-if="page <= totalPages"
+                                            @click="goToPage(page)"
+                                            :class="[
+                                                'inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-150',
+                                                page === currentPage 
+                                                    ? 'bg-blue-600 text-white border border-blue-600' 
+                                                    : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                                            ]"
+                                        >
+                                            {{ page }}
+                                        </button>
+                                    </template>
+                                    
+                                    <!-- Ellipsis for more pages -->
+                                    <span v-if="totalPages > 5" class="px-2 text-gray-500">...</span>
+                                    
+                                    <!-- Last page if not in the first 5 -->
+                                    <button 
+                                        v-if="totalPages > 5 && currentPage < totalPages - 2"
+                                        @click="goToPage(totalPages)"
+                                        class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-150"
+                                    >
+                                        {{ totalPages }}
+                                    </button>
+                                </div>
+                                
+                                <!-- Next Page Button -->
+                                <button 
+                                    @click="goToNextPage"
+                                    :disabled="currentPage === totalPages"
+                                    class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+                                >
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                    </svg>
+                                </button>
+                                
+                                <!-- Last Page Button -->
+                                <button 
+                                    @click="goToLastPage"
+                                    :disabled="currentPage === totalPages"
+                                    class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+                                >
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

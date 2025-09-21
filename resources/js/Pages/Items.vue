@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 
 const props = defineProps({
   items: Array,
@@ -9,6 +9,7 @@ const props = defineProps({
 
 const showModal = ref(false);
 const selectedItem = ref(null);
+const searchTerm = ref('');
 
 const form = useForm({
   item_id: null,
@@ -17,6 +18,20 @@ const form = useForm({
 });
 
 const quantityError = ref('');
+
+// Filter items based on search term
+const filteredItems = computed(() => {
+  if (!searchTerm.value.trim()) {
+    return props.items;
+  }
+  
+  const term = searchTerm.value.toLowerCase().trim();
+  return props.items.filter(item => 
+    item.name.toLowerCase().includes(term) ||
+    item.description?.toLowerCase().includes(term) ||
+    item.category?.toLowerCase().includes(term)
+  );
+});
 
 const openBorrowModal = (item) => {
   selectedItem.value = item;
@@ -86,13 +101,14 @@ const submitBorrow = () => {
               </svg>
               <input 
                 type="text" 
+                v-model="searchTerm"
                 placeholder="Search items..." 
                 class="w-full pl-10 pr-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 placeholder-gray-500"
               />
             </div>
             <div class="flex items-center space-x-2 text-sm text-gray-600">
               <span class="px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-full font-medium">
-                {{ items.length }} items available
+                {{ filteredItems.length }} {{ searchTerm ? 'items found' : 'items available' }}
               </span>
             </div>
           </div>
@@ -101,11 +117,11 @@ const submitBorrow = () => {
         <!-- Items Grid -->
         <div class="bg-white/50 backdrop-blur-sm rounded-2xl shadow-sm border border-white/20 p-8">
           <div
-            v-if="items.length"
+            v-if="filteredItems.length"
             class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8"
           >
             <div
-              v-for="item in items"
+              v-for="item in filteredItems"
               :key="item.id"
               class="group bg-white rounded-2xl shadow-sm hover:shadow-xl border border-gray-100 hover:border-emerald-200 transition-all duration-300 overflow-hidden transform hover:-translate-y-1"
             >
@@ -130,8 +146,15 @@ const submitBorrow = () => {
                 
                 <!-- Availability Badge -->
                 <div class="absolute top-3 right-3">
-                  <span class="px-2 py-1 bg-emerald-500 text-white text-xs font-semibold rounded-full shadow-lg">
-                    Available
+                  <span 
+                    :class="[
+                      'px-2 py-1 text-white text-xs font-semibold rounded-full shadow-lg',
+                      item.quantity > 0 
+                        ? 'bg-emerald-500' 
+                        : 'bg-red-500'
+                    ]"
+                  >
+                    {{ item.quantity > 0 ? 'Available' : 'Out of Stock' }}
                   </span>
                 </div>
               </div>
@@ -148,8 +171,13 @@ const submitBorrow = () => {
                       <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
                       </svg>
-                      <span class="text-sm text-gray-600 font-medium">
-                        {{ item.quantity }} in stock
+                      <span 
+                        :class="[
+                          'text-sm font-medium',
+                          item.quantity > 0 ? 'text-gray-600' : 'text-red-600'
+                        ]"
+                      >
+                        {{ item.quantity > 0 ? `${item.quantity} in stock` : 'Out of stock' }}
                       </span>
                     </div>
                   </div>
@@ -166,14 +194,23 @@ const submitBorrow = () => {
 
                 <!-- Borrow Button -->
                 <button
-                  @click="openBorrowModal(item)"
-                  class="w-full mt-6 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-semibold px-6 py-3 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+                  @click="item.quantity > 0 ? openBorrowModal(item) : null"
+                  :disabled="item.quantity === 0"
+                  :class="[
+                    'w-full mt-6 font-semibold px-6 py-3 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2',
+                    item.quantity > 0 
+                      ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white transform hover:scale-105 shadow-lg hover:shadow-xl focus:ring-emerald-500' 
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'
+                  ]"
                 >
                   <div class="flex items-center justify-center space-x-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg v-if="item.quantity > 0" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3-3m0 0l-3 3m3-3v12"></path>
                     </svg>
-                    <span>Borrow Item</span>
+                    <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                    <span>{{ item.quantity > 0 ? 'Borrow Item' : 'Out of Stock' }}</span>
                   </div>
                 </button>
               </div>
@@ -183,12 +220,26 @@ const submitBorrow = () => {
           <!-- Empty State -->
           <div v-else class="text-center py-16">
             <div class="bg-gradient-to-br from-gray-50 to-gray-100 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-6">
-              <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg v-if="searchTerm" class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              </svg>
+              <svg v-else class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
               </svg>
             </div>
-            <h3 class="text-xl font-semibold text-gray-700 mb-2">No items available</h3>
-            <p class="text-gray-500">Check back later for new items to borrow.</p>
+            <h3 class="text-xl font-semibold text-gray-700 mb-2">
+              {{ searchTerm ? 'No items found' : 'No items available' }}
+            </h3>
+            <p class="text-gray-500">
+              {{ searchTerm ? `No items match "${searchTerm}". Try a different search term.` : 'Check back later for new items to borrow.' }}
+            </p>
+            <button 
+              v-if="searchTerm"
+              @click="searchTerm = ''"
+              class="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors duration-200"
+            >
+              Clear Search
+            </button>
           </div>
         </div>
       </div>
@@ -225,7 +276,7 @@ const submitBorrow = () => {
           <form @submit.prevent="submitBorrow" class="space-y-6">
             <!-- Quantity Input -->
             <div class="space-y-2">
-              <label for="quantity" class="block text-sm font-semibold text-gray-700 flex items-center space-x-2">
+              <label for="quantity" class="flex text-sm font-semibold text-gray-700 items-center space-x-2">
                 <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
                 </svg>
@@ -264,7 +315,7 @@ const submitBorrow = () => {
             <div class="space-y-2">
               <label
                 for="expected_return"
-                class="block text-sm font-semibold text-gray-700 flex items-center space-x-2"
+                class="flex text-sm font-semibold text-gray-700 items-center space-x-2"
               >
                 <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>

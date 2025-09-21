@@ -7,6 +7,10 @@ const page = usePage();
 const items = ref(page.props.items || []);
 const searchTerm = ref('');
 
+// --- Pagination State ---
+const currentPage = ref(1);
+const itemsPerPage = 10;
+
 // Keep items in sync with backend props
 watchEffect(() => {
     if (page.props.items) {
@@ -22,6 +26,33 @@ const filteredItems = computed(() => {
         item.description.toLowerCase().includes(searchTerm.value.toLowerCase())
     );
 });
+
+// --- Pagination Computed Properties ---
+const totalItems = computed(() => filteredItems.value.length);
+const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage));
+
+const paginatedItems = computed(() => {
+    const start = (currentPage.value - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    return filteredItems.value.slice(start, end);
+});
+
+// Reset to first page when search term changes
+watchEffect(() => {
+    currentPage.value = 1;
+});
+
+// --- Pagination Navigation Functions ---
+const goToPage = (page) => {
+    if (page >= 1 && page <= totalPages.value) {
+        currentPage.value = page;
+    }
+};
+
+const goToFirstPage = () => goToPage(1);
+const goToLastPage = () => goToPage(totalPages.value);
+const goToPreviousPage = () => goToPage(currentPage.value - 1);
+const goToNextPage = () => goToPage(currentPage.value + 1);
 </script>
 
 <template>
@@ -45,7 +76,7 @@ const filteredItems = computed(() => {
         </div>
         <div class="hidden sm:flex items-center gap-2 bg-gradient-to-r from-emerald-50 to-blue-50 px-4 py-2 rounded-full border border-emerald-200">
           <div class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
-          <span class="text-sm font-medium text-emerald-700">{{ filteredItems.length }} Items</span>
+          <span class="text-sm font-medium text-emerald-700">{{ totalItems }} Items</span>
         </div>
       </div>
     </template>
@@ -84,8 +115,8 @@ const filteredItems = computed(() => {
               </div>
               <div class="flex items-center gap-3 text-sm text-gray-600">
                 <div class="bg-blue-50 px-3 py-2 rounded-lg border border-blue-100">
-                  <span class="font-semibold text-blue-700">{{ filteredItems.length }}</span>
-                  <span class="text-blue-600 ml-1">{{ filteredItems.length === 1 ? 'item' : 'items' }} found</span>
+                  <span class="font-semibold text-blue-700">{{ totalItems }}</span>
+                  <span class="text-blue-600 ml-1">{{ totalItems === 1 ? 'item' : 'items' }} found</span>
                 </div>
               </div>
             </div>
@@ -153,7 +184,7 @@ const filteredItems = computed(() => {
               </thead>
               <tbody class="bg-white divide-y divide-gray-100">
                 <tr
-                  v-for="(item, index) in filteredItems"
+                  v-for="(item, index) in paginatedItems"
                   :key="item.id"
                   class="hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200 group"
                 >
@@ -189,7 +220,7 @@ const filteredItems = computed(() => {
                   </td>
                 </tr>
 
-                <tr v-if="filteredItems.length === 0">
+                <tr v-if="paginatedItems.length === 0">
                   <td colspan="5" class="text-center py-16">
                     <div class="flex flex-col items-center justify-center space-y-4">
                       <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center">
@@ -208,6 +239,91 @@ const filteredItems = computed(() => {
             </table>
           </div>
 
+          <!-- Pagination Controls -->
+          <div v-if="totalPages > 1" class="bg-white px-6 py-4 border-t border-gray-200">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center text-sm text-gray-700">
+                <span>Page {{ currentPage }} of {{ totalPages }}</span>
+              </div>
+              
+              <div class="flex items-center space-x-2">
+                <!-- First Page Button -->
+                <button 
+                  @click="goToFirstPage"
+                  :disabled="currentPage === 1"
+                  class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>
+                  </svg>
+                </button>
+                
+                <!-- Previous Page Button -->
+                <button 
+                  @click="goToPreviousPage"
+                  :disabled="currentPage === 1"
+                  class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                  </svg>
+                </button>
+                
+                <!-- Page Numbers -->
+                <div class="flex items-center space-x-1">
+                  <template v-for="page in Math.min(5, totalPages)" :key="page">
+                    <button 
+                      v-if="page <= totalPages"
+                      @click="goToPage(page)"
+                      :class="[
+                        'inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-150',
+                        page === currentPage 
+                          ? 'bg-blue-600 text-white border border-blue-600' 
+                          : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                      ]"
+                    >
+                      {{ page }}
+                    </button>
+                  </template>
+                  
+                  <!-- Ellipsis for more pages -->
+                  <span v-if="totalPages > 5" class="px-2 text-gray-500">...</span>
+                  
+                  <!-- Last page if not in the first 5 -->
+                  <button 
+                    v-if="totalPages > 5 && currentPage < totalPages - 2"
+                    @click="goToPage(totalPages)"
+                    class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-150"
+                  >
+                    {{ totalPages }}
+                  </button>
+                </div>
+                
+                <!-- Next Page Button -->
+                <button 
+                  @click="goToNextPage"
+                  :disabled="currentPage === totalPages"
+                  class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                  </svg>
+                </button>
+                
+                <!-- Last Page Button -->
+                <button 
+                  @click="goToLastPage"
+                  :disabled="currentPage === totalPages"
+                  class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
           <!-- Enhanced Footer -->
           <div class="bg-gray-50 px-6 py-4 border-t border-gray-200">
             <div class="flex items-center justify-between text-sm text-gray-600">
@@ -218,7 +334,7 @@ const filteredItems = computed(() => {
                 </div>
                 <div class="flex items-center gap-2">
                   <div class="w-3 h-3 bg-emerald-500 rounded-full"></div>
-                  <span>Filtered: <strong class="text-gray-800">{{ filteredItems.length }}</strong></span>
+                  <span>Filtered: <strong class="text-gray-800">{{ totalItems }}</strong></span>
                 </div>
               </div>
               <div class="text-xs text-gray-500">

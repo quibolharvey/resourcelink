@@ -1,12 +1,22 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
 const props = defineProps({
   borrowedItems: {
     type: Array,
     default: () => []
   }
+});
+
+// Sort borrowed items by creation date (newest first)
+const sortedBorrowedItems = computed(() => {
+  return [...props.borrowedItems].sort((a, b) => {
+    const dateA = new Date(a.created_at || a.id);
+    const dateB = new Date(b.created_at || b.id);
+    return dateB - dateA; // Descending order (newest first)
+  });
 });
 
 const statusClass = (status) => {
@@ -81,7 +91,7 @@ const formatDate = (dateString) => {
               </div>
               <div class="ml-4">
                 <p class="text-sm font-medium text-gray-600">Total Items</p>
-                <p class="text-2xl font-bold text-gray-900">{{ borrowedItems.length }}</p>
+                <p class="text-2xl font-bold text-gray-900">{{ sortedBorrowedItems.length }}</p>
               </div>
             </div>
           </div>
@@ -95,7 +105,7 @@ const formatDate = (dateString) => {
               </div>
               <div class="ml-4">
                 <p class="text-sm font-medium text-gray-600">Pending</p>
-                <p class="text-2xl font-bold text-gray-900">{{ borrowedItems.filter(item => (item.status || 'accepted').toLowerCase() === 'pending').length }}</p>
+                <p class="text-2xl font-bold text-gray-900">{{ sortedBorrowedItems.filter(item => (item.status || 'accepted').toLowerCase() === 'pending').length }}</p>
               </div>
             </div>
           </div>
@@ -109,7 +119,7 @@ const formatDate = (dateString) => {
               </div>
               <div class="ml-4">
                 <p class="text-sm font-medium text-gray-600">Accepted</p>
-                <p class="text-2xl font-bold text-gray-900">{{ borrowedItems.filter(item => (item.status || 'accepted').toLowerCase() === 'accepted').length }}</p>
+                <p class="text-2xl font-bold text-gray-900">{{ sortedBorrowedItems.filter(item => (item.status || 'accepted').toLowerCase() === 'accepted').length }}</p>
               </div>
             </div>
           </div>
@@ -123,7 +133,7 @@ const formatDate = (dateString) => {
               </div>
               <div class="ml-4">
                 <p class="text-sm font-medium text-gray-600">Returned</p>
-                <p class="text-2xl font-bold text-gray-900">{{ borrowedItems.filter(item => (item.status || 'accepted').toLowerCase() === 'returned').length }}</p>
+                <p class="text-2xl font-bold text-gray-900">{{ sortedBorrowedItems.filter(item => (item.status || 'accepted').toLowerCase() === 'returned').length }}</p>
               </div>
             </div>
           </div>
@@ -136,7 +146,7 @@ const formatDate = (dateString) => {
               <h3 class="text-lg font-semibold text-gray-900">Items Overview</h3>
               <div class="flex items-center space-x-2">
                 <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                  {{ borrowedItems.length }} {{ borrowedItems.length === 1 ? 'item' : 'items' }}
+                  {{ sortedBorrowedItems.length }} {{ sortedBorrowedItems.length === 1 ? 'item' : 'items' }}
                 </span>
               </div>
             </div>
@@ -190,7 +200,7 @@ const formatDate = (dateString) => {
               </thead>
               <tbody class="divide-y divide-gray-100">
                 <tr 
-                  v-for="borrow in borrowedItems" 
+                  v-for="borrow in sortedBorrowedItems" 
                   :key="borrow.id" 
                   class="hover:bg-gray-50/50 transition-all duration-200 group"
                 >
@@ -205,9 +215,9 @@ const formatDate = (dateString) => {
                         <div class="font-semibold text-gray-900 text-sm">
                           {{ borrow.item?.name || 'N/A' }}
                         </div>
-                        <div class="text-xs text-gray-500 mt-1">
+                        <!-- <div class="text-xs text-gray-500 mt-1">
                           ID: #{{ borrow.id }}
-                        </div>
+                        </div> -->
                       </div>
                     </div>
                   </td>
@@ -253,7 +263,7 @@ const formatDate = (dateString) => {
           </div>
 
           <div
-            v-if="borrowedItems.length === 0"
+            v-if="sortedBorrowedItems.length === 0"
             class="text-center py-16"
           >
             <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">

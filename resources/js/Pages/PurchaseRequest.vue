@@ -10,12 +10,38 @@ const addForm = ref({ unit: '', description: '', quantity: '', price: '' });
 const addError = ref('');
 const submitSuccess = ref(false);
 
+// --- Pagination State ---
+const currentPage = ref(1);
+const itemsPerPage = 5;
+
 // Computed property for total amount
 const totalAmount = computed(() => {
     return requested.value.reduce((sum, item) => {
         return sum + (parseFloat(item.price) * parseInt(item.quantity));
     }, 0);
 });
+
+// --- Pagination Computed Properties ---
+const totalItems = computed(() => requested.value.length);
+const totalPages = computed(() => Math.ceil(totalItems.value / itemsPerPage));
+
+const paginatedItems = computed(() => {
+    const start = (currentPage.value - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    return requested.value.slice(start, end);
+});
+
+// --- Pagination Navigation Functions ---
+const goToPage = (page) => {
+    if (page >= 1 && page <= totalPages.value) {
+        currentPage.value = page;
+    }
+};
+
+const goToFirstPage = () => goToPage(1);
+const goToLastPage = () => goToPage(totalPages.value);
+const goToPreviousPage = () => goToPage(currentPage.value - 1);
+const goToNextPage = () => goToPage(currentPage.value + 1);
 
 const fetchCart = async () => {
     loading.value = true;
@@ -114,7 +140,7 @@ onMounted(fetchCart);
                     <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m-.4-1L5 3m2 10v5a2 2 0 002 2h6a2 2 0 002-2v-5m-8 0V9a2 2 0 012-2h2a2 2 0 012 2v4.01"/>
                     </svg>
-                    <span class="text-lg font-semibold text-gray-700">{{ requested.length }} items</span>
+                    <span class="text-lg font-semibold text-gray-700">{{ totalItems }} items</span>
                 </div>
             </div>
         </template>
@@ -160,7 +186,7 @@ onMounted(fetchCart);
                                     <span class="ml-3 text-gray-600 font-medium">Loading items...</span>
                                 </div>
 
-                                <div v-else-if="requested.length === 0" class="text-center py-12">
+                                <div v-else-if="totalItems === 0" class="text-center py-12">
                                     <svg class="mx-auto h-16 w-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M3 3h2l.4 2M7 13h10l4-8H5.4m-.4-1L5 3m2 10v5a2 2 0 002 2h6a2 2 0 002-2v-5m-8 0V9a2 2 0 012-2h2a2 2 0 012 2v4.01"/>
                                     </svg>
@@ -183,7 +209,7 @@ onMounted(fetchCart);
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                <tr v-for="item in requested" :key="item.id" class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                                <tr v-for="item in paginatedItems" :key="item.id" class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                                                     <td class="py-4 px-2">
                                                         <span class="inline-flex px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
                                                             {{ item.unit }}
@@ -212,7 +238,7 @@ onMounted(fetchCart);
 
                                     <!-- Mobile Cards -->
                                     <div class="md:hidden space-y-4">
-                                        <div v-for="item in requested" :key="item.id" class="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                                        <div v-for="item in paginatedItems" :key="item.id" class="bg-gray-50 rounded-xl p-4 border border-gray-200">
                                             <div class="flex justify-between items-start mb-3">
                                                 <div class="flex-1">
                                                     <span class="inline-flex px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full mb-2">
@@ -243,6 +269,91 @@ onMounted(fetchCart);
                                                     <span class="text-gray-500">Total:</span>
                                                     <span class="text-lg font-bold text-gray-900">₱{{ (parseFloat(item.price) * parseInt(item.quantity)).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</span>
                                                 </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Pagination Controls -->
+                                    <div v-if="totalPages > 1" class="mt-6 pt-6 border-t border-gray-200">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center text-sm text-gray-700">
+                                                <span>Page {{ currentPage }} of {{ totalPages }}</span>
+                                            </div>
+                                            
+                                            <div class="flex items-center space-x-2">
+                                                <!-- First Page Button -->
+                                                <button 
+                                                    @click="goToFirstPage"
+                                                    :disabled="currentPage === 1"
+                                                    class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+                                                >
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>
+                                                    </svg>
+                                                </button>
+                                                
+                                                <!-- Previous Page Button -->
+                                                <button 
+                                                    @click="goToPreviousPage"
+                                                    :disabled="currentPage === 1"
+                                                    class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+                                                >
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                                                    </svg>
+                                                </button>
+                                                
+                                                <!-- Page Numbers -->
+                                                <div class="flex items-center space-x-1">
+                                                    <template v-for="page in Math.min(5, totalPages)" :key="page">
+                                                        <button 
+                                                            v-if="page <= totalPages"
+                                                            @click="goToPage(page)"
+                                                            :class="[
+                                                                'inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-150',
+                                                                page === currentPage 
+                                                                    ? 'bg-blue-600 text-white border border-blue-600' 
+                                                                    : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                                                            ]"
+                                                        >
+                                                            {{ page }}
+                                                        </button>
+                                                    </template>
+                                                    
+                                                    <!-- Ellipsis for more pages -->
+                                                    <span v-if="totalPages > 5" class="px-2 text-gray-500">...</span>
+                                                    
+                                                    <!-- Last page if not in the first 5 -->
+                                                    <button 
+                                                        v-if="totalPages > 5 && currentPage < totalPages - 2"
+                                                        @click="goToPage(totalPages)"
+                                                        class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-150"
+                                                    >
+                                                        {{ totalPages }}
+                                                    </button>
+                                                </div>
+                                                
+                                                <!-- Next Page Button -->
+                                                <button 
+                                                    @click="goToNextPage"
+                                                    :disabled="currentPage === totalPages"
+                                                    class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+                                                >
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                                    </svg>
+                                                </button>
+                                                
+                                                <!-- Last Page Button -->
+                                                <button 
+                                                    @click="goToLastPage"
+                                                    :disabled="currentPage === totalPages"
+                                                    class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+                                                >
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/>
+                                                    </svg>
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
