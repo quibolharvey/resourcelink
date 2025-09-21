@@ -1,11 +1,12 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import NavLink from '@/Components/NavLink.vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import { Link, usePage } from '@inertiajs/vue3';
+import axios from 'axios';
 
 const page = usePage();
 
@@ -14,6 +15,64 @@ const isAdmin = computed(() => page.props.auth.role === 'admin');
 const isUser = computed(() => page.props.auth.role === 'user');
 
 const showingNavigationDropdown = ref(false);
+const showingAnnouncements = ref(false);
+const announcements = ref([]);
+const announcementCount = ref(0);
+const isLoading = ref(false);
+
+// Show bell icon only for users and office (not admin)
+const showBellIcon = computed(() => isUser.value || isOffice.value);
+
+// Fetch announcements
+const fetchAnnouncements = async () => {
+    try {
+        isLoading.value = true;
+        const response = await axios.get('/api/announcements');
+        announcements.value = response.data.announcements;
+        announcementCount.value = response.data.count;
+    } catch (error) {
+        console.error('Error fetching announcements:', error);
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+// Toggle announcements dropdown
+const toggleAnnouncements = () => {
+    showingAnnouncements.value = !showingAnnouncements.value;
+    if (showingAnnouncements.value && announcements.value.length === 0) {
+        fetchAnnouncements();
+    }
+};
+
+// Get priority color
+const getPriorityColor = (priority) => {
+    const colors = {
+        urgent: 'text-red-600 bg-red-50',
+        high: 'text-orange-600 bg-orange-50',
+        medium: 'text-blue-600 bg-blue-50',
+        low: 'text-gray-600 bg-gray-50'
+    };
+    return colors[priority] || colors.medium;
+};
+
+// Format date
+const formatDate = (date) => {
+    return new Date(date).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+};
+
+onMounted(() => {
+    // Fetch announcements count on mount for users and office
+    if (showBellIcon.value) {
+        fetchAnnouncements();
+    }
+});
 </script>
 
 <template>
@@ -127,6 +186,18 @@ const showingNavigationDropdown = ref(false);
             </svg>
             Office Request
           </ResponsiveNavLink>
+          
+          <ResponsiveNavLink 
+            :href="route('announcement')" 
+            :active="route().current('announcement')"
+            class="group flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all duration-200 hover:bg-blue-50 hover:text-blue-700"
+            :class="route().current('announcement') ? 'bg-blue-100 text-blue-700 shadow-sm border-l-4 border-blue-500' : 'text-slate-600 hover:translate-x-1'"
+          >
+            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/>
+            </svg>
+            Announcements
+          </ResponsiveNavLink>
         </template>
 
         <!-- User Links -->
@@ -218,8 +289,109 @@ const showingNavigationDropdown = ref(false);
             </svg>
           </button>
 
-          <!-- Right: Account dropdown -->
-          <div class="flex-1 flex justify-end">
+          <!-- Right: Notifications and Account dropdown -->
+          <div class="flex-1 flex justify-end items-center space-x-3">
+            <!-- Bell Icon for Announcements (Users and Office only) -->
+            <div v-if="showBellIcon" class="relative">
+              <button
+                @click="toggleAnnouncements"
+                class="relative p-2.5 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 focus:outline-none transition-all duration-200"
+                :class="{ 'text-blue-600 bg-blue-50': showingAnnouncements }"
+              >
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5v-5zM4.828 7l2.586 2.586a2 2 0 002.828 0L15 7H4.828zM4.828 7H3a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-1.172M4.828 7l2.586-2.586a2 2 0 012.828 0L15 7" />
+                </svg>
+                <!-- Notification Badge -->
+                <span 
+                  v-if="announcementCount > 0"
+                  class="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium"
+                >
+                  {{ announcementCount > 9 ? '9+' : announcementCount }}
+                </span>
+              </button>
+
+              <!-- Announcements Dropdown -->
+              <div 
+                v-show="showingAnnouncements"
+                class="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-slate-200 z-50 max-h-96 overflow-y-auto"
+              >
+                <div class="p-4 border-b border-slate-100">
+                  <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-slate-800">Announcements</h3>
+                    <button 
+                      @click="showingAnnouncements = false"
+                      class="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Loading State -->
+                <div v-if="isLoading" class="p-4 text-center">
+                  <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+                  <p class="text-sm text-slate-500 mt-2">Loading announcements...</p>
+                </div>
+
+                <!-- Empty State -->
+                <div v-else-if="announcements.length === 0" class="p-4 text-center">
+                  <svg class="w-12 h-12 text-slate-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5v-5zM4.828 7l2.586 2.586a2 2 0 002.828 0L15 7H4.828zM4.828 7H3a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-1.172M4.828 7l2.586-2.586a2 2 0 012.828 0L15 7" />
+                  </svg>
+                  <p class="text-sm text-slate-500">No announcements available</p>
+                </div>
+
+                <!-- Announcements List -->
+                <div v-else class="max-h-64 overflow-y-auto">
+                  <div 
+                    v-for="announcement in announcements" 
+                    :key="announcement.id"
+                    class="p-4 border-b border-slate-100 hover:bg-slate-50 transition-colors duration-150"
+                  >
+                    <div class="flex items-start justify-between mb-2">
+                      <div class="flex items-center space-x-2">
+                        <span 
+                          :class="getPriorityColor(announcement.priority)"
+                          class="px-2 py-1 text-xs font-medium rounded-full"
+                        >
+                          {{ announcement.priority.toUpperCase() }}
+                        </span>
+                        <span v-if="announcement.is_pinned" class="text-yellow-500">
+                          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                          </svg>
+                        </span>
+                      </div>
+                      <span class="text-xs text-slate-500">{{ formatDate(announcement.created_at) }}</span>
+                    </div>
+                    
+                    <h4 class="font-semibold text-slate-800 mb-1">{{ announcement.title }}</h4>
+                    <p class="text-sm text-slate-600 line-clamp-2">{{ announcement.message }}</p>
+                    
+                    <div class="flex items-center justify-between mt-2">
+                      <span class="text-xs text-slate-500">By {{ announcement.user.name }}</span>
+                      <span 
+                        :class="announcement.status === 'published' ? 'text-green-600 bg-green-50' : 'text-gray-600 bg-gray-50'"
+                        class="px-2 py-1 text-xs font-medium rounded-full"
+                      >
+                        {{ announcement.status.toUpperCase() }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Footer -->
+                <div v-if="announcements.length > 0" class="p-3 border-t border-slate-100 bg-slate-50 rounded-b-xl">
+                  <p class="text-xs text-slate-500 text-center">
+                    {{ announcementCount }} announcement{{ announcementCount !== 1 ? 's' : '' }} available
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Account Dropdown -->
             <Dropdown align="right" width="48">
               <template #trigger>
                 <button

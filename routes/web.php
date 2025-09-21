@@ -11,6 +11,7 @@ use App\Http\Controllers\BorrowedItemController;
 use App\Http\Controllers\BorrowedHistoryController;
 use App\Http\Controllers\OfficeRequestController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\AnnouncementController;
 
 /*
 |--------------------------------------------------------------------------
@@ -43,6 +44,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/borrowhistory', [BorrowedHistoryController::class, 'index'])->name('borrowhistory');
         Route::get('/officeinventory', [InventoryController::class, 'officesInventory'])->name('officeinventory');
         Route::get('/officerequest', [OfficeRequestController::class, 'index'])->name('officerequest');
+        Route::get('/announcement', [AnnouncementController::class, 'index'])->name('announcement');
     });
 
     // Office pages
@@ -100,6 +102,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/api/office-request/{id}', [OfficeRequestController::class, 'show']);
     Route::post('/api/office-request/{id}/approve', [OfficeRequestController::class, 'approve']);
     Route::get('/api/office-request-history', [OfficeRequestController::class, 'allHistory']);
+
+    // Announcement Management (Admin only)
+Route::middleware(['role:admin'])->group(function () {
+    Route::post('/announcements', [AnnouncementController::class, 'store'])->name('announcements.store');
+    Route::put('/announcements/{announcement}', [AnnouncementController::class, 'update'])->name('announcements.update');
+    Route::delete('/announcements/{announcement}', [AnnouncementController::class, 'destroy'])->name('announcements.destroy');
+    Route::patch('/announcements/{announcement}/pin', [AnnouncementController::class, 'togglePin'])->name('announcements.pin');
+    Route::patch('/announcements/{announcement}/publish', [AnnouncementController::class, 'publish'])->name('announcements.publish');
+    Route::patch('/announcements/{announcement}/archive', [AnnouncementController::class, 'archive'])->name('announcements.archive');
+});
+
+// Public announcements for all authenticated users
+Route::middleware(['auth'])->group(function () {
+    Route::get('/api/announcements', [AnnouncementController::class, 'publicIndex'])->name('announcements.public');
+});
 });
 
 /*
