@@ -1,8 +1,10 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head } from '@inertiajs/vue3';
+import { Head, usePage, router } from '@inertiajs/vue3';
 import { ref, onMounted, computed } from 'vue';
+import axios from 'axios';
 
+const page = usePage();
 const requested = ref([]);
 const loading = ref(true);
 const error = ref('');
@@ -46,31 +48,23 @@ const goToNextPage = () => goToPage(currentPage.value + 1);
 const fetchCart = async () => {
     loading.value = true;
     try {
-        const response = await fetch('/api/purchase-cart');
-        if (response.ok) {
-            const data = await response.json();
-            requested.value = data.items || [];
-        } else {
-            error.value = 'Failed to load cart.';
-        }
+        const response = await axios.get('/api/purchase-cart');
+        requested.value = response.data.items || [];
     } catch (e) {
         error.value = 'Failed to load cart.';
+        console.error('Fetch cart error:', e);
     }
     loading.value = false;
 };
 
 const removeItem = async (itemId) => {
     try {
-        const response = await fetch(`/api/purchase-cart/items/${itemId}`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            },
-        });
-        if (response.ok) {
-            requested.value = requested.value.filter(i => i.id !== itemId);
-        }
-    } catch (e) {}
+        await axios.delete(`/api/purchase-cart/items/${itemId}`);
+        requested.value = requested.value.filter(i => i.id !== itemId);
+    } catch (e) {
+        console.error('Remove item error:', e);
+        error.value = e.response?.data?.message || 'Failed to remove item.';
+    }
 };
 
 const addCustomItem = async () => {
@@ -79,49 +73,35 @@ const addCustomItem = async () => {
         addError.value = 'All fields are required.';
         return;
     }
+    
     try {
-        const response = await fetch('/api/purchase-cart/items', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            },
-            body: JSON.stringify({
-                unit: addForm.value.unit,
-                description: addForm.value.description,
-                quantity: addForm.value.quantity,
-                price: addForm.value.price,
-            }),
+        const response = await axios.post('/api/purchase-cart/items', {
+            unit: addForm.value.unit,
+            description: addForm.value.description,
+            quantity: addForm.value.quantity,
+            price: addForm.value.price,
         });
-        if (response.ok) {
-            const item = await response.json();
-            requested.value.push(item);
-            addForm.value = { unit: '', description: '', quantity: '', price: '' };
-        } else {
-            addError.value = 'Failed to add item.';
-        }
+        
+        requested.value.push(response.data);
+        addForm.value = { unit: '', description: '', quantity: '', price: '' };
     } catch (e) {
-        addError.value = 'Failed to add item.';
+        addError.value = e.response?.data?.message || 'Failed to add item.';
+        console.error('Add item error:', e);
     }
 };
 
 const submitPurchaseRequest = async () => {
     try {
-        const response = await fetch('/api/purchase-cart/submit', {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            },
-        });
-        if (response.ok) {
-            const data = await response.json();
-            submitSuccess.value = true;
-            requested.value = [];
-            if (data.redirect) {
-                window.location.href = '/requesthistory';
-            }
+        const response = await axios.post('/api/purchase-cart/submit');
+        submitSuccess.value = true;
+        requested.value = [];
+        if (response.data.redirect) {
+            window.location.href = '/requesthistory';
         }
-    } catch (e) {}
+    } catch (e) {
+        error.value = e.response?.data?.message || 'Failed to submit purchase request.';
+        console.error('Submit error:', e);
+    }
 };
 
 onMounted(fetchCart);

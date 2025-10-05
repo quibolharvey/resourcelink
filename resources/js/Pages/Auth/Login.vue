@@ -40,7 +40,7 @@ const submit = () => {
             </div>
 
             <!-- Title -->
-            <h1 class="text-2xl font-bold text-center text-gray-800">Welcome Back</h1>
+            <h1 class="text-2xl font-bold text-center text-gray-800">Welcome to CalapeResourceLink</h1>
             <p class="text-center text-gray-500 text-sm">
                 Please sign in to continue
             </p>
@@ -97,6 +97,12 @@ const submit = () => {
                     Log In
                 </PrimaryButton>
             </form>
+            <p class="text-center text-sm text-gray-600">
+                    Don’t have an account?
+                    <Link :href="route('register')" class="font-medium text-blue-600 hover:text-blue-700">
+                        Sign up
+                    </Link>
+                </p>
         </div>
     </GuestLayout>
 </template>

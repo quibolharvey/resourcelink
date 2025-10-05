@@ -174,6 +174,13 @@ const updateItem = () => {
     });
 };
 
+// Delete Item
+const deleteItem = (id) => {
+    if (confirm('Are you sure you want to delete this item?')) {
+        router.delete(`/inventory/${id}`);
+    }
+};
+
 // Open Request Modal
 const openRequestModal = (item) => {
     requestItem.value = { ...item };
@@ -189,36 +196,23 @@ const openRequestModal = (item) => {
 // Submit Request (Add to Cart)
 const submitRequest = async () => {
     try {
-        const response = await fetch('/api/purchase-cart/items', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            },
-            body: JSON.stringify({
-                inventory_item_id: requestForm.inventory_item_id,
-                unit: requestForm.unit,
-                description: requestForm.description,
-                quantity: requestQuantity.value,
-                price: requestForm.price,
-            }),
+        const { data } = await window.axios.post('/api/purchase-cart/items', {
+            inventory_item_id: requestForm.inventory_item_id,
+            unit: requestForm.unit,
+            description: requestForm.description,
+            quantity: requestQuantity.value,
+            price: requestForm.price,
         });
 
-        if (response.ok) {
-            showRequestModal.value = false;
-            requestForm.reset();
-            requestQuantity.value = 1;
-            requestSuccess.value = true;
-            requestError.value = '';
-            setTimeout(() => requestSuccess.value = false, 3000);
-        } else {
-            const errorData = await response.json();
-            requestError.value = errorData.message || 'Failed to add item to cart.';
-            setTimeout(() => requestError.value = '', 5000);
-        }
+        showRequestModal.value = false;
+        requestForm.reset();
+        requestQuantity.value = 1;
+        requestSuccess.value = true;
+        requestError.value = '';
+        setTimeout(() => requestSuccess.value = false, 3000);
     } catch (error) {
         console.error('Request item errors:', error);
-        requestError.value = 'Failed to add item to cart.';
+        requestError.value = error?.response?.data?.message || 'Failed to add item to cart.';
         setTimeout(() => requestError.value = '', 5000);
     }
 };
@@ -401,6 +395,15 @@ const requestQuantity = ref(1);
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
                                                 </svg>
                                                 Request
+                                            </button>
+                                            <button 
+                                                @click="deleteItem(item.id)"
+                                                class="inline-flex items-center px-3 py-1.5 bg-red-50 text-red-700 text-sm font-medium rounded-lg hover:bg-red-100 transition-colors duration-150"
+                                            >
+                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                                Delete
                                             </button>
                                         </div>
                                     </td>

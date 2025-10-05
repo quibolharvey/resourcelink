@@ -326,6 +326,7 @@ const submitBorrow = () => {
                 type="date"
                 v-model="form.expected_return"
                 id="expected_return"
+                :min="new Date().toISOString().split('T')[0]"
                 required
                 class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all duration-200 text-lg"
               />

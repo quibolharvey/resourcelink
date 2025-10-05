@@ -80,9 +80,15 @@ class InventoryController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Inventory $inventory)
+    public function destroy($id)
     {
-        //
+        $item = Inventory::findOrFail($id);
+        // Optional: ensure only owner or admin can delete
+        if ($item->user_id !== auth()->id() && !auth()->user()->hasRole('admin')) {
+            return redirect()->back()->with('error', 'Unauthorized');
+        }
+        $item->delete();
+        return redirect()->back()->with('success', 'Item deleted successfully.');
     }
 
     /**

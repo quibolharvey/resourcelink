@@ -22,7 +22,7 @@ const form = useForm({
 });
 </script>
 
-<template>
+<!-- <template>
     <section>
         <header>
             <h2 class="text-lg font-medium text-gray-900">
@@ -109,4 +109,7 @@ const form = useForm({
             </div>
         </form>
     </section>
+</template> -->
+<template>
+    <h1>PROFILE</h1>
 </template>

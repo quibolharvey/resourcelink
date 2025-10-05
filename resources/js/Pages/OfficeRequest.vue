@@ -1,7 +1,8 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, usePage } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref, computed, nextTick } from 'vue';
+import axios from 'axios';
 
 const page = usePage();
 const requests = ref(page.props.requests || []);
@@ -22,18 +23,20 @@ const historyRequests = ref([]);
 const historyError = ref('');
 
 const openModal = async (id) => {
+    // Ensure history modal closes so details modal can be on top
+    if (showHistoryModal.value) {
+        showHistoryModal.value = false;
+        await nextTick();
+    }
     showModal.value = true;
     modalLoading.value = true;
     modalError.value = '';
     try {
-        const response = await fetch(`/api/office-request/${id}`);
-        if (response.ok) {
-            selectedRequest.value = await response.json();
-        } else {
-            modalError.value = 'Failed to load request details.';
-        }
-    } catch {
-        modalError.value = 'Failed to load request details.';
+        const response = await axios.get(`/api/office-request/${id}`);
+        selectedRequest.value = response.data;
+    } catch (e) {
+        modalError.value = e.response?.data?.message || 'Failed to load request details.';
+        console.error('Load request error:', e);
     }
     modalLoading.value = false;
 };
@@ -46,45 +49,42 @@ const closeModal = () => {
 
 const approveRequest = async (req) => {
     try {
-        const response = await fetch(`/api/office-request/${req.id}/approve`, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            },
-        });
-        if (response.ok) {
-            req.purchase_cart.status = 'approved';
-            // No need to remove from requests; the view uses pendingRequests which filters by status
-            // Close modal if the approved request is currently open
-            if (selectedRequest.value && selectedRequest.value.id === req.id) {
-                closeModal();
-            }
-            // If history modal is open, refresh history list
-            if (showHistoryModal.value) {
-                try {
-                    const hres = await fetch('/api/office-request-history');
-                    if (hres.ok) {
-                        historyRequests.value = await hres.json();
-                    }
-                } catch {}
+        await axios.post(`/api/office-request/${req.id}/approve`);
+        req.purchase_cart.status = 'approved';
+        // Close modal if the approved request is currently open
+        if (selectedRequest.value && selectedRequest.value.id === req.id) {
+            closeModal();
+        }
+        // If history modal is open, refresh history list
+        if (showHistoryModal.value) {
+            try {
+                const hres = await axios.get('/api/office-request-history');
+                historyRequests.value = hres.data;
+            } catch (e) {
+                console.error('Refresh history error:', e);
             }
         }
-    } catch {}
+    } catch (e) {
+        console.error('Approve request error:', e);
+        alert(e.response?.data?.message || 'Failed to approve request.');
+    }
 };
 
 const openHistoryModal = async () => {
+    // Close details modal if open, then show history modal
+    if (showModal.value) {
+        showModal.value = false;
+        await nextTick();
+    }
     showHistoryModal.value = true;
     historyLoading.value = true;
     historyError.value = '';
     try {
-        const response = await fetch('/api/office-request-history');
-        if (response.ok) {
-            historyRequests.value = await response.json();
-        } else {
-            historyError.value = 'Failed to load history.';
-        }
-    } catch {
-        historyError.value = 'Failed to load history.';
+        const response = await axios.get('/api/office-request-history');
+        historyRequests.value = response.data;
+    } catch (e) {
+        historyError.value = e.response?.data?.message || 'Failed to load history.';
+        console.error('Load history error:', e);
     }
     historyLoading.value = false;
 };
@@ -445,7 +445,7 @@ const printRequest = () => {
         <!-- Enhanced Modal -->
         <div
             v-if="showModal"
-            class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200"
+            class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[10000] p-4 animate-in fade-in duration-200"
         >
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden border border-gray-100 transform animate-in zoom-in-95 duration-300">
                 <!-- Modal Header -->
@@ -612,7 +612,7 @@ const printRequest = () => {
         <!-- Enhanced History Modal -->
         <div
             v-if="showHistoryModal"
-            class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200"
+            class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 animate-in fade-in duration-200"
         >
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden border border-gray-100 transform animate-in zoom-in-95 duration-300">
                 <!-- History Modal Header -->

@@ -198,6 +198,18 @@ onMounted(() => {
             </svg>
             Announcements
           </ResponsiveNavLink>
+
+          <ResponsiveNavLink 
+            :href="route('users')" 
+            :active="route().current('users')"
+            class="group flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all duration-200 hover:bg-blue-50 hover:text-blue-700"
+            :class="route().current('users') ? 'bg-blue-100 text-blue-700 shadow-sm border-l-4 border-blue-500' : 'text-slate-600 hover:translate-x-1'"
+          >
+            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5V4H2v16h5m10 0V10M7 20v-6h10v6M7 10h10" />
+            </svg>
+            Users
+          </ResponsiveNavLink>
         </template>
 
         <!-- User Links -->

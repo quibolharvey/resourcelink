@@ -12,6 +12,7 @@ use App\Http\Controllers\BorrowedHistoryController;
 use App\Http\Controllers\OfficeRequestController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AnnouncementController;
+use App\Http\Controllers\UsersController;
 
 /*
 |--------------------------------------------------------------------------
@@ -45,6 +46,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/officeinventory', [InventoryController::class, 'officesInventory'])->name('officeinventory');
         Route::get('/officerequest', [OfficeRequestController::class, 'index'])->name('officerequest');
         Route::get('/announcement', [AnnouncementController::class, 'index'])->name('announcement');
+        Route::get('/users', [UsersController::class, 'index'])->name('users');
     });
 
     // Office pages
@@ -84,6 +86,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/inventory', [InventoryController::class, 'store'])->name('inventory.store');
     Route::patch('/inventory/{id}/pullout', [InventoryController::class, 'pullOut'])->name('inventory.pullout');
     Route::patch('/inventory/{inventory}', [InventoryController::class, 'update'])->name('inventory.update');
+    Route::delete('/inventory/{id}', [InventoryController::class, 'destroy'])->name('inventory.destroy');
 
     // Borrowing Logic
     Route::post('/borrow', [BorrowRequestController::class, 'store'])->name('borrow.store');
@@ -111,6 +114,9 @@ Route::middleware(['role:admin'])->group(function () {
     Route::patch('/announcements/{announcement}/pin', [AnnouncementController::class, 'togglePin'])->name('announcements.pin');
     Route::patch('/announcements/{announcement}/publish', [AnnouncementController::class, 'publish'])->name('announcements.publish');
     Route::patch('/announcements/{announcement}/archive', [AnnouncementController::class, 'archive'])->name('announcements.archive');
+
+    // Users Management
+    Route::delete('/users/{id}', [UsersController::class, 'destroy'])->name('users.destroy');
 });
 
 // Public announcements for all authenticated users

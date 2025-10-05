@@ -698,3 +698,4 @@ const formatDate = (date) => {
         </div>
     </AuthenticatedLayout>
 </template>
+

@@ -10,10 +10,20 @@ const form = useForm({
     name: '',
     email: '',
     phone_number: '',
-    address: '',
+    address: 'Calape/',
     password: '',
     password_confirmation: '',
 });
+
+const ADDRESS_PREFIX = 'Calape/';
+
+const enforceAddressPrefix = () => {
+    const current = form.address ?? '';
+    if (!current.startsWith(ADDRESS_PREFIX)) {
+        const suffix = current.replace(/^Calape\/?/, '');
+        form.address = ADDRESS_PREFIX + suffix;
+    }
+};
 
 const submit = () => {
     form.post(route('register'), {
@@ -82,6 +92,8 @@ const submit = () => {
                         type="text"
                         class="mt-1 block w-full border-gray-300 rounded-lg focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
                         v-model="form.address"
+                        @input="enforceAddressPrefix"
+                        placeholder="Calape/Your Barangay"
                         required
                         autocomplete="street-address"
                     />
