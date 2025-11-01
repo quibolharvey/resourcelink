@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 
 class UsersController extends Controller
@@ -76,6 +77,29 @@ class UsersController extends Controller
         $user->delete();
 
         return redirect()->back()->with('success', 'User deleted successfully.');
+    }
+
+    public function updatePassword(Request $request, $id)
+    {
+        $authUser = auth()->user();
+        if (!$authUser || !$authUser->hasRole('admin')) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        // Prevent changing own password here; admins should use profile page
+        if ((int) $authUser->id === (int) $id) {
+            return response()->json(['message' => 'Use your profile page to change your password.'], 422);
+        }
+
+        $validated = $request->validate([
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $user = User::findOrFail($id);
+        $user->password = Hash::make($validated['password']);
+        $user->save();
+
+        return response()->json(['success' => true]);
     }
 }
 

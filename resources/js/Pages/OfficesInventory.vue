@@ -6,6 +6,7 @@ import { Head, usePage } from '@inertiajs/vue3';
 const page = usePage();
 const items = ref(page.props.items || []);
 const searchTerm = ref('');
+const selectedOffice = ref('');
 
 // --- Pagination State ---
 const currentPage = ref(1);
@@ -18,13 +19,21 @@ watchEffect(() => {
     }
 });
 
+const officeOptions = computed(() => {
+    const names = new Set((items.value || []).map(i => i.user?.name).filter(Boolean));
+    return Array.from(names).sort((a, b) => a.localeCompare(b));
+});
+
 const filteredItems = computed(() => {
-    if (!searchTerm.value) return items.value;
-    return items.value.filter(item =>
-        (item.user?.name || '').toLowerCase().includes(searchTerm.value.toLowerCase()) ||
-        item.unit.toLowerCase().includes(searchTerm.value.toLowerCase()) ||
-        item.description.toLowerCase().includes(searchTerm.value.toLowerCase())
-    );
+    const term = (searchTerm.value || '').toLowerCase();
+    return (items.value || []).filter(item => {
+        const matchesText = !term ||
+            (item.user?.name || '').toLowerCase().includes(term) ||
+            (item.unit || '').toLowerCase().includes(term) ||
+            (item.description || '').toLowerCase().includes(term);
+        const matchesOffice = !selectedOffice.value || (item.user?.name === selectedOffice.value);
+        return matchesText && matchesOffice;
+    });
 });
 
 // --- Pagination Computed Properties ---
@@ -62,7 +71,7 @@ const goToNextPage = () => goToPage(currentPage.value + 1);
     <template #header>
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
-          <div class="bg-gradient-to-r from-blue-500 to-indigo-600 p-2 rounded-xl shadow-lg">
+          <div class="bg-gradient-to-r from-blue-500 to-purple-600 p-2 rounded-xl shadow-lg">
             <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
             </svg>
@@ -114,6 +123,16 @@ const goToNextPage = () => goToPage(currentPage.value + 1);
                 </div>
               </div>
               <div class="flex items-center gap-3 text-sm text-gray-600">
+                <div class="flex items-center gap-2">
+                  <label class="text-sm font-semibold text-gray-700">Office</label>
+                  <select
+                    v-model="selectedOffice"
+                    class="px-3 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">All</option>
+                    <option v-for="name in officeOptions" :key="name" :value="name">{{ name }}</option>
+                  </select>
+                </div>
                 <div class="bg-blue-50 px-3 py-2 rounded-lg border border-blue-100">
                   <span class="font-semibold text-blue-700">{{ totalItems }}</span>
                   <span class="text-blue-600 ml-1">{{ totalItems === 1 ? 'item' : 'items' }} found</span>

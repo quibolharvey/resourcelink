@@ -257,6 +257,192 @@ const printRequest = () => {
         alert('Error printing request. Please try again.');
     }
 };
+
+// Consolidate the items from the currently selected request
+const consolidateLoading = ref(false);
+const consolidateError = ref('');
+const showConsolidateModal = ref(false);
+const consolidatedItems = ref([]);
+const consolidatedGrandTotal = ref(0);
+const toastMessage = ref('');
+const showToast = (message, duration = 2000) => {
+    toastMessage.value = message;
+    setTimeout(() => {
+        if (toastMessage.value === message) {
+            toastMessage.value = '';
+        }
+    }, duration);
+};
+const recomputeGrandTotal = () => {
+    consolidatedGrandTotal.value = (consolidatedItems.value || []).reduce(
+        (sum, item) => sum + Number(item.total || 0),
+        0
+    );
+};
+const addToConsolidatedItems = (items) => {
+    const byKey = new Map(
+        (consolidatedItems.value || []).map((it) => [
+            `${it.unit || ''}__${(it.description || '').toLowerCase()}`,
+            { ...it },
+        ])
+    );
+    (items || []).forEach((it) => {
+        const key = `${it.unit || ''}__${(it.description || '').toLowerCase()}`;
+        const priceNum = Number(it.price || 0);
+        const qtyNum = Number(it.quantity || 0);
+        if (byKey.has(key)) {
+            const existing = byKey.get(key);
+            // Keep existing unit price; sum quantities
+            existing.quantity = Number(existing.quantity || 0) + qtyNum;
+            existing.total = Number(existing.price || 0) * Number(existing.quantity || 0);
+            byKey.set(key, existing);
+        } else {
+            byKey.set(key, {
+                unit: it.unit || '',
+                description: it.description || '',
+                quantity: qtyNum,
+                price: priceNum,
+                total: priceNum * qtyNum,
+            });
+        }
+    });
+    consolidatedItems.value = Array.from(byKey.values());
+    recomputeGrandTotal();
+};
+const clearConsolidated = () => {
+    axios.post('/api/consolidated-form/clear')
+        .then(() => {
+            consolidatedItems.value = [];
+            consolidatedGrandTotal.value = 0;
+            showToast('Cleared consolidated.');
+        })
+        .catch((e) => {
+            console.error('Failed to clear consolidated:', e);
+            showToast('Failed to clear consolidated.');
+        });
+};
+const printConsolidated = () => {
+    try {
+        const printWindow = window.open('', '_blank', 'width=800,height=600');
+        if (!printWindow) {
+            alert('Please allow pop-ups to print the consolidated form');
+            return;
+        }
+        const rows = (consolidatedItems.value || []).map(item => `
+            <tr>
+                <td>${item.unit || ''}</td>
+                <td>${item.description || ''}</td>
+                <td>${item.quantity || 0}</td>
+                <td>₱ ${Number(item.price || 0).toFixed(2)}</td>
+                <td>₱ ${Number(item.total || 0).toFixed(2)}</td>
+            </tr>
+        `).join('');
+        const printContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Consolidated Purchase Form</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+                    .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #1f2937; padding-bottom: 20px; }
+                    .header h1 { color: #1f2937; margin-bottom: 10px; font-size: 24px; }
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+                    th, td { border: 1px solid #d1d5db; padding: 12px 8px; text-align: left; }
+                    th { background-color: #f3f4f6; font-weight: bold; color: #374151; }
+                    .total { font-weight: bold; background-color: #f3f4f6; color: #1f2937; }
+                    .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; padding-top: 15px; }
+                    @media print { body { margin: 0; } .no-print { display: none; } table { box-shadow: none; } }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>Consolidated Purchase Form</h1>
+                    <p><strong>Resource Link Management System</strong></p>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Unit</th>
+                            <th>Description</th>
+                            <th>Quantity</th>
+                            <th>Unit Price</th>
+                            <th>Total Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows}
+                        <tr class="total">
+                            <td colspan="4" style="text-align: right;"><strong>Grand Total:</strong></td>
+                            <td><strong>₱ ${Number(consolidatedGrandTotal.value || 0).toFixed(2)}</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="footer">
+                    <p>Generated on ${new Date().toLocaleString()}</p>
+                    <p>Resource Link Management System - Consolidated Form</p>
+                </div>
+            </body>
+            </html>
+        `;
+        printWindow.document.write(printContent);
+        printWindow.document.close();
+        printWindow.onload = function() {
+            printWindow.focus();
+            printWindow.print();
+            setTimeout(() => { printWindow.close(); }, 1000);
+        };
+        setTimeout(() => {
+            if (!printWindow.closed) {
+                printWindow.focus();
+                printWindow.print();
+                setTimeout(() => { printWindow.close(); }, 1000);
+            }
+        }, 500);
+    } catch (e) {
+        console.error('Error printing consolidated form:', e);
+        alert('Error printing consolidated form. Please try again.');
+    }
+};
+const loadConsolidatedAndOpen = async () => {
+    try {
+        const res = await axios.get('/api/consolidated-form');
+        const items = res.data?.items || [];
+        consolidatedItems.value = items.map((it) => ({
+            unit: it.unit || '',
+            description: it.description || '',
+            price: Number(it.price || 0),
+            quantity: Number(it.quantity || 0),
+            total: Number(it.total || 0),
+        }));
+        recomputeGrandTotal();
+        showConsolidateModal.value = true;
+    } catch (e) {
+        console.error('Failed to load consolidated form:', e);
+        showToast('Failed to load consolidated form.');
+    }
+};
+const consolidateRequest = async () => {
+    try {
+        if (!selectedRequest.value) {
+            return;
+        }
+        consolidateError.value = '';
+        consolidateLoading.value = true;
+        // Send consolidate action to backend (expects API route to handle consolidation)
+        await axios.post(`/api/office-request/${selectedRequest.value.id}/consolidate`, {
+            items: selectedRequest.value.purchase_cart?.items || [],
+        });
+        // Add to consolidated view from current request
+        addToConsolidatedItems(selectedRequest.value.purchase_cart?.items || []);
+        showToast('Added to consolidated.');
+    } catch (error) {
+        console.error('Error consolidating request:', error);
+        consolidateError.value = error?.response?.data?.message || 'Failed to consolidate items.';
+        alert(consolidateError.value);
+    } finally {
+        consolidateLoading.value = false;
+    }
+};
 </script>
 
 <template>
@@ -266,7 +452,7 @@ const printRequest = () => {
         <template #header>
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-3">
-                    <div class="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+                    <div class="p-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl shadow-lg">
                         <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                         </svg>
@@ -296,6 +482,18 @@ const printRequest = () => {
                             <span>Live updates enabled</span>
                         </div>
                     </div>
+                    <button
+                        @click="loadConsolidatedAndOpen"
+                        class="group relative overflow-hidden bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 hover:shadow-xl"
+                    >
+                        <div class="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                        <div class="relative flex items-center space-x-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 12h18M3 17h18"></path>
+                            </svg>
+                            <span class="font-medium">Consolidated Form</span>
+                        </div>
+                    </button>
                     <button
                         @click="openHistoryModal"
                         class="group relative overflow-hidden bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 hover:shadow-xl"
@@ -592,6 +790,23 @@ const printRequest = () => {
                         <!-- Print Button -->
                         <div class="flex justify-end pt-6 border-t border-gray-200">
                             <button
+                                @click="consolidateRequest"
+                                :disabled="consolidateLoading || !selectedRequest"
+                                class="group relative mr-3 overflow-hidden bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                                <div class="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                                <div class="relative flex items-center space-x-2">
+                                    <svg v-if="!consolidateLoading" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                    </svg>
+                                    <svg v-else class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                                    </svg>
+                                    <span class="font-semibold">Add to Consolidated</span>
+                                </div>
+                            </button>
+                            <button
                                 @click="printRequest"
                                 class="group relative overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 hover:shadow-xl"
                             >
@@ -777,6 +992,111 @@ const printRequest = () => {
                         </table>
                     </div>
                 </div>
+            </div>
+        </div>
+        
+        <!-- Consolidated Form Modal -->
+        <div
+            v-if="showConsolidateModal"
+            class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[10001] p-4 animate-in fade-in duration-200"
+        >
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden border border-gray-100 transform animate-in zoom-in-95 duration-300">
+                <div class="bg-gradient-to-r from-emerald-50 to-green-50 px-8 py-6 border-b border-gray-100 flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <div class="p-3 bg-gradient-to-br from-emerald-600 to-green-600 rounded-xl shadow-lg">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 12h18M3 17h18"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-bold text-gray-900">Consolidated Form</h3>
+                            <p class="text-gray-600 mt-1">Aggregated items ready for printing</p>
+                        </div>
+                    </div>
+                    <button @click="showConsolidateModal = false" class="p-2 hover:bg-white/80 rounded-xl transition-colors duration-200 group">
+                        <svg class="w-6 h-6 text-gray-400 group-hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="p-8 overflow-y-auto max-h-[calc(90vh-140px)]">
+                    <div class="bg-gray-50 rounded-2xl p-6 border border-gray-200">
+                        <div class="flex items-center justify-between mb-6">
+                            <h4 class="text-xl font-bold text-gray-900">Items</h4>
+                            <div class="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
+                                {{ consolidatedItems.length }} Items
+                            </div>
+                        </div>
+                        <div class="overflow-hidden rounded-xl border border-gray-200 shadow-sm">
+                            <table class="w-full bg-white">
+                                <thead class="bg-gradient-to-r from-gray-50 to-gray-100">
+                                    <tr>
+                                        <th class="py-4 px-4 text-left font-semibold text-gray-700 text-sm">Unit</th>
+                                        <th class="py-4 px-4 text-left font-semibold text-gray-700 text-sm">Description</th>
+                                        <th class="py-4 px-4 text-left font-semibold text-gray-700 text-sm">Quantity</th>
+                                        <th class="py-4 px-4 text-left font-semibold text-gray-700 text-sm">Unit Price</th>
+                                        <th class="py-4 px-4 text-left font-semibold text-gray-700 text-sm">Total Cost</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100">
+                                    <tr
+                                        v-for="(item, index) in consolidatedItems"
+                                        :key="`${item.unit}-${item.description}`"
+                                        class="hover:bg-emerald-50/50 transition-colors duration-200"
+                                        :class="index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'"
+                                    >
+                                        <td class="py-4 px-4 font-medium text-gray-900">{{ item.unit }}</td>
+                                        <td class="py-4 px-4 text-gray-700">{{ item.description }}</td>
+                                        <td class="py-4 px-4">
+                                            <span class="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg font-medium">
+                                                {{ item.quantity }}
+                                            </span>
+                                        </td>
+                                        <td class="py-4 px-4 font-mono text-green-600 font-semibold">₱ {{ Number(item.price).toFixed(2) }}</td>
+                                        <td class="py-4 px-4 font-mono text-green-600 font-bold">₱ {{ Number(item.total).toFixed(2) }}</td>
+                                    </tr>
+                                </tbody>
+                                <tfoot>
+                                    <tr class="bg-gradient-to-r from-emerald-50 to-green-50 border-t-2 border-emerald-200">
+                                        <td colspan="4" class="py-4 px-4 text-right font-bold text-gray-900 text-lg">Grand Total:</td>
+                                        <td class="py-4 px-4 font-mono text-2xl font-bold text-green-600">
+                                            ₱ {{ Number(consolidatedGrandTotal).toFixed(2) }}
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="flex justify-between pt-6">
+                        <button
+                            @click="clearConsolidated"
+                            class="px-4 py-2 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+                            :disabled="consolidatedItems.length === 0"
+                        >
+                            Clear Consolidated
+                        </button>
+                        <button
+                            @click="printConsolidated"
+                            class="group relative overflow-hidden bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 hover:shadow-xl"
+                        >
+                            <div class="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                            <div class="relative flex items-center space-x-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                                </svg>
+                                <span class="font-semibold">Print Consolidated</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div v-if="toastMessage" class="fixed bottom-6 right-6 z-[11000]">
+            <div class="px-4 py-3 rounded-xl shadow-lg border border-emerald-200 bg-emerald-50 text-emerald-800 flex items-center space-x-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                <span class="font-medium">{{ toastMessage }}</span>
             </div>
         </div>
     </AuthenticatedLayout>

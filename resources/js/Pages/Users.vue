@@ -2,6 +2,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { computed, defineProps, ref } from 'vue';
+import axios from 'axios';
 
 const props = defineProps({
   offices: Array,
@@ -30,6 +31,61 @@ const deleteUser = (id) => {
     router.delete(route('users.destroy', id));
   }
 };
+
+// Password change modal state
+const showPwdModal = ref(false);
+const pwdUser = ref(null);
+const newPassword = ref('');
+const confirmPassword = ref('');
+const pwdLoading = ref(false);
+const pwdError = ref('');
+const pwdSuccess = ref('');
+
+const openPwdModal = (user) => {
+  if (!isAdmin.value) return;
+  pwdUser.value = user;
+  newPassword.value = '';
+  confirmPassword.value = '';
+  pwdError.value = '';
+  pwdSuccess.value = '';
+  showPwdModal.value = true;
+};
+
+const closePwdModal = () => {
+  showPwdModal.value = false;
+  pwdUser.value = null;
+  pwdError.value = '';
+  pwdSuccess.value = '';
+};
+
+const submitPasswordChange = async () => {
+  if (!pwdUser.value) return;
+  pwdError.value = '';
+  pwdSuccess.value = '';
+  if (!newPassword.value || newPassword.value.length < 8) {
+    pwdError.value = 'Password must be at least 8 characters.';
+    return;
+  }
+  if (newPassword.value !== confirmPassword.value) {
+    pwdError.value = 'Passwords do not match.';
+    return;
+  }
+  try {
+    pwdLoading.value = true;
+    await axios.patch(`/users/${pwdUser.value.id}/password`, {
+      password: newPassword.value,
+      password_confirmation: confirmPassword.value,
+    });
+    pwdSuccess.value = 'Password updated.';
+    setTimeout(() => {
+      closePwdModal();
+    }, 800);
+  } catch (e) {
+    pwdError.value = e?.response?.data?.message || 'Failed to update password.';
+  } finally {
+    pwdLoading.value = false;
+  }
+};
 </script>
 
 <template>
@@ -38,7 +94,7 @@ const deleteUser = (id) => {
   <AuthenticatedLayout>
     <template #header>
       <div class="flex items-center space-x-3">
-        <div class="p-2 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl">
+        <div class="p-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl">
           <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5V4H2v16h5m10 0V10M7 20v-6h10v6M7 10h10" />
           </svg>
@@ -101,7 +157,17 @@ const deleteUser = (id) => {
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ user.email }}</td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ user.phone_number }}</td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ user.address }}</td>
-                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm space-x-2">
+                    <button
+                      v-if="isAdmin"
+                      @click="openPwdModal(user)"
+                      class="inline-flex items-center px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 hover:text-indigo-800 font-medium rounded-xl border border-indigo-200 transition-colors duration-200"
+                    >
+                      <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c1.657 0 3-1.343 3-3S13.657 5 12 5 9 6.343 9 8s1.343 3 3 3zm0 2c-2.21 0-4 1.343-4 3v3h8v-3c0-1.657-1.79-3-4-3z" />
+                      </svg>
+                      Change Password
+                    </button>
                     <button
                       @click="deleteUser(user.id)"
                       class="inline-flex items-center px-3 py-2 bg-red-50 hover:bg-red-100 text-red-700 hover:text-red-800 font-medium rounded-xl border border-red-200 transition-colors duration-200"
@@ -151,8 +217,17 @@ const deleteUser = (id) => {
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ user.email }}</td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ user.phone_number }}</td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ user.address }}</td>
-                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
-                    <span class="inline-flex items-center px-3 py-2 text-gray-400 bg-gray-50 border border-gray-200 rounded-xl cursor-not-allowed">Protected</span>
+                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm space-x-2">
+                    <button
+                      v-if="isAdmin"
+                      @click="openPwdModal(user)"
+                      class="inline-flex items-center px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 hover:text-indigo-800 font-medium rounded-xl border border-indigo-200 transition-colors duration-200"
+                    >
+                      <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c1.657 0 3-1.343 3-3S13.657 5 12 5 9 6.343 9 8s1.343 3 3 3zm0 2c-2.21 0-4 1.343-4 3v3h8v-3c0-1.657-1.79-3-4-3z" />
+                      </svg>
+                      Change Password
+                    </button>
                   </td>
                 </tr>
               </tbody>
@@ -168,6 +243,55 @@ const deleteUser = (id) => {
     </div>
   </AuthenticatedLayout>
   
+  <!-- Change Password Modal -->
+  <div
+    v-if="showPwdModal"
+    class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[10000] p-4"
+  >
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-100">
+      <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+        <h3 class="text-lg font-semibold text-gray-900">Change Password</h3>
+        <button @click="closePwdModal" class="p-2 hover:bg-gray-50 rounded-xl">
+          <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div class="px-6 py-5 space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+          <input
+            v-model="newPassword"
+            type="password"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            placeholder="Enter new password"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+          <input
+            v-model="confirmPassword"
+            type="password"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            placeholder="Re-enter new password"
+          />
+        </div>
+        <p v-if="pwdError" class="text-sm text-red-600">{{ pwdError }}</p>
+        <p v-if="pwdSuccess" class="text-sm text-green-600">{{ pwdSuccess }}</p>
+      </div>
+      <div class="px-6 py-4 border-t border-gray-100 flex justify-end space-x-2">
+        <button @click="closePwdModal" class="px-4 py-2 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50">Cancel</button>
+        <button
+          @click="submitPasswordChange"
+          :disabled="pwdLoading"
+          class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-60"
+        >
+          <span v-if="!pwdLoading">Update Password</span>
+          <span v-else>Updating...</span>
+        </button>
+      </div>
+    </div>
+  </div>
 </template>
 
 

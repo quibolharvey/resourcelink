@@ -22,7 +22,7 @@ const form = useForm({
 });
 </script>
 
-<!-- <template>
+<template>
     <section>
         <header>
             <h2 class="text-lg font-medium text-gray-900">
@@ -64,6 +64,7 @@ const form = useForm({
                     v-model="form.email"
                     required
                     autocomplete="username"
+                    readonly
                 />
 
                 <InputError class="mt-2" :message="form.errors.email" />
@@ -90,7 +91,7 @@ const form = useForm({
                 </div>
             </div>
 
-            <div class="flex items-center gap-4">
+            <!-- <div class="flex items-center gap-4">
                 <PrimaryButton :disabled="form.processing">Save</PrimaryButton>
 
                 <Transition
@@ -106,10 +107,8 @@ const form = useForm({
                         Saved.
                     </p>
                 </Transition>
-            </div>
+            </div> -->
         </form>
     </section>
-</template> -->
-<template>
-    <h1>PROFILE</h1>
 </template>
+
