@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
     borrowedHistories: {
@@ -11,6 +11,8 @@ const props = defineProps({
 });
 
 const statusOptions = ['accepted', 'returned', 'overdue'];
+
+const searchQuery = ref('');
 
 // Pagination state
 const currentPage = ref(1);
@@ -52,15 +54,41 @@ const sortedBorrowedHistories = computed(() => {
     });
 });
 
+const filteredBorrowedHistories = computed(() => {
+    const query = searchQuery.value.trim().toLowerCase();
+    if (!query) {
+        return sortedBorrowedHistories.value;
+    }
+    return sortedBorrowedHistories.value.filter((history) => {
+        const name = history.user?.name || '';
+        return name.toLowerCase().includes(query);
+    });
+});
+
 // Pagination computed properties
 const totalPages = computed(() => {
-    return Math.ceil(sortedBorrowedHistories.value.length / itemsPerPage);
+    return Math.ceil(filteredBorrowedHistories.value.length / itemsPerPage);
 });
 
 const paginatedHistories = computed(() => {
     const start = (currentPage.value - 1) * itemsPerPage;
     const end = start + itemsPerPage;
-    return sortedBorrowedHistories.value.slice(start, end);
+    return filteredBorrowedHistories.value.slice(start, end);
+});
+
+watch(searchQuery, () => {
+    currentPage.value = 1;
+});
+
+watch(filteredBorrowedHistories, (newVal) => {
+    const total = Math.ceil(newVal.length / itemsPerPage);
+    if (total === 0) {
+        currentPage.value = 1;
+        return;
+    }
+    if (currentPage.value > total) {
+        currentPage.value = total;
+    }
 });
 
 // Pagination methods
@@ -69,7 +97,7 @@ const goToPage = (page) => {
         currentPage.value = page;
     }
 };
-
+    
 const goToPreviousPage = () => {
     if (currentPage.value > 1) {
         currentPage.value--;
@@ -80,6 +108,152 @@ const goToNextPage = () => {
     if (currentPage.value < totalPages.value) {
         currentPage.value++;
     }
+};
+
+// Print function for specific status
+const printByStatus = (status) => {
+    const filtered = sortedBorrowedHistories.value.filter(h => h.status === status);
+    
+    if (filtered.length === 0) {
+        alert(`No ${status} items to print.`);
+        return;
+    }
+
+    const printWindow = window.open('', '_blank');
+    const statusTitle = status.charAt(0).toUpperCase() + status.slice(1);
+    
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Borrowed History - ${statusTitle}</title>
+            <style>
+                @media print {
+                    @page {
+                        margin: 1cm;
+                    }
+                }
+                body {
+                    font-family: Arial, sans-serif;
+                    margin: 20px;
+                    color: #333;
+                }
+                .header {
+                    text-align: center;
+                    margin-bottom: 30px;
+                    border-bottom: 3px solid #333;
+                    padding-bottom: 20px;
+                }
+                .header h1 {
+                    margin: 0;
+                    font-size: 24px;
+                    color: #1f2937;
+                }
+                .header p {
+                    margin: 5px 0;
+                    color: #6b7280;
+                }
+                .info {
+                    margin-bottom: 20px;
+                    padding: 15px;
+                    background-color: #f9fafb;
+                    border-radius: 8px;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-top: 20px;
+                }
+                th, td {
+                    border: 1px solid #d1d5db;
+                    padding: 12px;
+                    text-align: left;
+                }
+                th {
+                    background-color: #f3f4f6;
+                    font-weight: bold;
+                    color: #1f2937;
+                }
+                tr:nth-child(even) {
+                    background-color: #f9fafb;
+                }
+                .status-badge {
+                    padding: 4px 12px;
+                    border-radius: 12px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    display: inline-block;
+                }
+                .status-accepted {
+                    background-color: #dbeafe;
+                    color: #1e40af;
+                }
+                .status-returned {
+                    background-color: #d1fae5;
+                    color: #065f46;
+                }
+                .status-overdue {
+                    background-color: #fee2e2;
+                    color: #991b1b;
+                }
+                .footer {
+                    margin-top: 30px;
+                    text-align: center;
+                    font-size: 12px;
+                    color: #6b7280;
+                    border-top: 1px solid #e5e7eb;
+                    padding-top: 20px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>Borrowed History Report</h1>
+                <p>Status: ${statusTitle}</p>
+                <p>Generated on: ${new Date().toLocaleString()}</p>
+            </div>
+            <div class="info">
+                <strong>Total Records:</strong> ${filtered.length}
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Item Name</th>
+                        <th>Quantity</th>
+                        <th>Borrower Name</th>
+                        <th>Borrower Address</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Expected Return Date</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${filtered.map(history => `
+                        <tr>
+                            <td>${history.item?.name || 'N/A'}</td>
+                            <td>${history.quantity}</td>
+                            <td>${history.user?.name || 'N/A'}</td>
+                            <td>${history.user?.address || 'N/A'}</td>
+                            <td>${history.user?.email || 'N/A'}</td>
+                            <td>${history.user?.phone_number || 'N/A'}</td>
+                            <td>${formatDate(history.expected_return_date)}</td>
+                            <td><span class="status-badge status-${history.status}">${history.status.charAt(0).toUpperCase() + history.status.slice(1)}</span></td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+            <div class="footer">
+                <p>This is a computer-generated report.</p>
+            </div>
+        </body>
+        </html>
+    `);
+    
+    printWindow.document.close();
+    setTimeout(() => {
+        printWindow.print();
+    }, 250);
 };
 </script>
 
@@ -103,17 +277,34 @@ const goToNextPage = () => {
                     </div>
                 </div>
                 <div class="text-sm text-gray-500 bg-white px-4 py-2 rounded-full border border-gray-200 shadow-sm">
-                    {{ sortedBorrowedHistories.length }} {{ sortedBorrowedHistories.length === 1 ? 'record' : 'records' }}
+                    {{ filteredBorrowedHistories.length }} {{ filteredBorrowedHistories.length === 1 ? 'record' : 'records' }}
                 </div>
             </div>
         </template>
 
         <div class="py-8">
             <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
+                <div class="mb-8 flex flex-col sm:flex-row sm:justify-start gap-3">
+                    <div class="relative w-full sm:w-80 md:w-96">
+                        <span class="absolute inset-y-0 left-3 flex items-center pointer-events-none text-gray-400">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35m1.6-4.9a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z"></path>
+                            </svg>
+                        </span>
+                        <input
+                            v-model="searchQuery"
+                            type="search"
+                            placeholder="Search by borrower name..."
+                            autocomplete="off"
+                            class="w-full rounded-2xl border border-gray-200 bg-white py-3 pl-11 pr-4 text-sm text-gray-700 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                        />
+                    </div>
+                </div>
+
                 <!-- Stats Cards -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div class="bg-gradient-to-r from-blue-50 to-blue-100 p-6 rounded-2xl border border-blue-200">
-                        <div class="flex items-center justify-between">
+                        <div class="flex items-center justify-between mb-3">
                             <div>
                                 <p class="text-blue-600 text-sm font-medium">Accepted</p>
                                 <p class="text-2xl font-bold text-blue-900">
@@ -126,10 +317,19 @@ const goToNextPage = () => {
                                 </svg>
                             </div>
                         </div>
+                        <button
+                            @click="printByStatus('accepted')"
+                            class="w-full mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                            </svg>
+                            <span>Print Accepted</span>
+                        </button>
                     </div>
                     
                     <div class="bg-gradient-to-r from-green-50 to-green-100 p-6 rounded-2xl border border-green-200">
-                        <div class="flex items-center justify-between">
+                        <div class="flex items-center justify-between mb-3">
                             <div>
                                 <p class="text-green-600 text-sm font-medium">Returned</p>
                                 <p class="text-2xl font-bold text-green-900">
@@ -142,10 +342,19 @@ const goToNextPage = () => {
                                 </svg>
                             </div>
                         </div>
+                        <button
+                            @click="printByStatus('returned')"
+                            class="w-full mt-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                            </svg>
+                            <span>Print Returned</span>
+                        </button>
                     </div>
                     
                     <div class="bg-gradient-to-r from-red-50 to-red-100 p-6 rounded-2xl border border-red-200">
-                        <div class="flex items-center justify-between">
+                        <div class="flex items-center justify-between mb-3">
                             <div>
                                 <p class="text-red-600 text-sm font-medium">Overdue</p>
                                 <p class="text-2xl font-bold text-red-900">
@@ -158,6 +367,15 @@ const goToNextPage = () => {
                                 </svg>
                             </div>
                         </div>
+                        <button
+                            @click="printByStatus('overdue')"
+                            class="w-full mt-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                            </svg>
+                            <span>Print Overdue</span>
+                        </button>
                     </div>
                 </div>
 
@@ -175,7 +393,7 @@ const goToNextPage = () => {
                     </div>
                     
                     <div class="p-8">
-                        <div v-if="sortedBorrowedHistories.length === 0" class="text-center py-16">
+                        <div v-if="filteredBorrowedHistories.length === 0" class="text-center py-16">
                             <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
                                 <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
@@ -291,14 +509,14 @@ const goToNextPage = () => {
                                                             {{ option.charAt(0).toUpperCase() + option.slice(1) }}
                                                         </option>
                                                     </select>
-                                                    <span v-if="history.status === 'returned'" 
+                                                    <!-- <span v-if="history.status === 'returned'" 
                                                         class="text-xs text-gray-500 flex items-center gap-1"
                                                         title="This item has been returned and cannot be changed">
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
                                                         </svg>
                                                         Locked
-                                                    </span>
+                                                    </span> -->
                                                 </div>
                                             </div>
                                         </td>
@@ -313,9 +531,9 @@ const goToNextPage = () => {
                                 <span class="mr-2">Showing</span>
                                 <span class="font-medium">{{ (currentPage - 1) * itemsPerPage + 1 }}</span>
                                 <span class="mx-1">to</span>
-                                <span class="font-medium">{{ Math.min(currentPage * itemsPerPage, sortedBorrowedHistories.length) }}</span>
+                                <span class="font-medium">{{ Math.min(currentPage * itemsPerPage, filteredBorrowedHistories.length) }}</span>
                                 <span class="ml-1">of</span>
-                                <span class="font-medium ml-1">{{ sortedBorrowedHistories.length }}</span>
+                                <span class="font-medium ml-1">{{ filteredBorrowedHistories.length }}</span>
                                 <span class="ml-1">results</span>
                             </div>
                             

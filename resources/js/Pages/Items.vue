@@ -14,6 +14,7 @@ const searchTerm = ref('');
 const form = useForm({
   item_id: null,
   quantity: 1,
+  borrow_date: '',
   expected_return: '',
 });
 
@@ -37,6 +38,7 @@ const openBorrowModal = (item) => {
   selectedItem.value = item;
   form.item_id = item.id;
   form.quantity = 1;
+  form.borrow_date = '';
   form.expected_return = '';
   quantityError.value = '';
   showModal.value = true;
@@ -189,6 +191,7 @@ const submitBorrow = () => {
                     <span class="text-lg font-bold text-emerald-600">
                       ₱{{ item.fee }}
                     </span>
+                    <h5>- fee per item</h5>
                   </div>
                 </div>
 
@@ -311,6 +314,27 @@ const submitBorrow = () => {
               </div>
             </div>
 
+            <!-- Date to be Borrowed -->
+            <div class="space-y-2">
+              <label
+                for="borrow_date"
+                class="flex text-sm font-semibold text-gray-700 items-center space-x-2"
+              >
+                <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+                <span>Date to be Borrowed</span>
+              </label>
+              <input
+                type="date"
+                v-model="form.borrow_date"
+                id="borrow_date"
+                :min="new Date().toISOString().split('T')[0]"
+                required
+                class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all duration-200 text-lg"
+              />
+            </div>
+
             <!-- Expected Return Date -->
             <div class="space-y-2">
               <label
@@ -326,7 +350,7 @@ const submitBorrow = () => {
                 type="date"
                 v-model="form.expected_return"
                 id="expected_return"
-                :min="new Date().toISOString().split('T')[0]"
+                :min="form.borrow_date || new Date().toISOString().split('T')[0]"
                 required
                 class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all duration-200 text-lg"
               />

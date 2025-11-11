@@ -25,3 +25,6 @@ class ConsolidatedItem extends Model
 }
 
 
+
+
+

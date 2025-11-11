@@ -443,6 +443,28 @@ const consolidateRequest = async () => {
         consolidateLoading.value = false;
     }
 };
+
+const deleteRequestById = async (req) => {
+    try {
+        if (!req || !req.id) return;
+        const confirmDelete = confirm('Are you sure you want to delete this request? This action cannot be undone.');
+        if (!confirmDelete) return;
+        await axios.delete(`/api/office-request/${req.id}`);
+        requests.value = (requests.value || []).filter(r => r.id !== req.id);
+        if (showHistoryModal.value) {
+            try {
+                const hres = await axios.get('/api/office-request-history');
+                historyRequests.value = hres.data;
+            } catch (e) {
+                console.error('Refresh history error:', e);
+            }
+        }
+        showToast('Request deleted.');
+    } catch (e) {
+        console.error('Delete request error:', e);
+        alert(e.response?.data?.message || 'Failed to delete request.');
+    }
+};
 </script>
 
 <template>
@@ -595,27 +617,38 @@ const consolidateRequest = async () => {
                                         </div>
                                     </td>
                                     <td class="py-4 px-6">
-                                        <button
-                                            @click="approveRequest(req)"
-                                            :disabled="req.purchase_cart?.status === 'approved'"
-                                            class="relative px-5 py-2 rounded-lg font-medium shadow-md transition-all duration-300 transform hover:scale-105"
-                                            :class="req.purchase_cart?.status === 'approved'
-                                                ? 'bg-gray-100 text-gray-500 cursor-not-allowed border border-gray-200'
-                                                : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl'"
-                                        >
-                                            <div v-if="req.purchase_cart?.status === 'approved'" class="flex items-center space-x-2">
+                                        <div class="flex items-center space-x-2">
+                                            <button
+                                                @click="approveRequest(req)"
+                                                :disabled="req.purchase_cart?.status === 'approved'"
+                                                class="relative px-5 py-2 rounded-lg font-medium shadow-md transition-all duration-300 transform hover:scale-105"
+                                                :class="req.purchase_cart?.status === 'approved'
+                                                    ? 'bg-gray-100 text-gray-500 cursor-not-allowed border border-gray-200'
+                                                    : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl'"
+                                            >
+                                                <div v-if="req.purchase_cart?.status === 'approved'" class="flex items-center space-x-2">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                                    </svg>
+                                                    <span>Approved</span>
+                                                </div>
+                                                <div v-else class="flex items-center space-x-2">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                    </svg>
+                                                    <span>Approve</span>
+                                                </div>
+                                            </button>
+                                            <button
+                                                @click="deleteRequestById(req)"
+                                                class="p-2 rounded-md border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 shadow-sm transition-colors"
+                                                title="Delete"
+                                            >
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m-7 0a1 1 0 01-1-1V5a1 1 0 011-1h8a1 1 0 011 1v1m-9 0h10"></path>
                                                 </svg>
-                                                <span>Approved</span>
-                                            </div>
-                                            <div v-else class="flex items-center space-x-2">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                                </svg>
-                                                <span>Approve</span>
-                                            </div>
-                                        </button>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                                 <tr v-if="pendingRequests.length === 0">
@@ -660,14 +693,45 @@ const consolidateRequest = async () => {
                                 <p class="text-gray-600 mt-1">Complete request information and items</p>
                             </div>
                         </div>
-                        <button
-                            @click="closeModal"
-                            class="p-2 hover:bg-white/80 rounded-xl transition-colors duration-200 group"
-                        >
-                            <svg class="w-6 h-6 text-gray-400 group-hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                        </button>
+                        <div class="flex items-center space-x-3">
+                            <button
+                                @click="consolidateRequest"
+                                :disabled="consolidateLoading || !selectedRequest"
+                                class="group relative overflow-hidden bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white px-4 py-2 rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105 hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                                <div class="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                                <div class="relative flex items-center space-x-2">
+                                    <svg v-if="!consolidateLoading" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                    </svg>
+                                    <svg v-else class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                                    </svg>
+                                    <span class="font-semibold">Add to Consolidated</span>
+                                </div>
+                            </button>
+                            <button
+                                @click="printRequest"
+                                class="group relative overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-2 rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105 hover:shadow-xl"
+                            >
+                                <div class="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                                <div class="relative flex items-center space-x-2">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                                    </svg>
+                                    <span class="font-semibold">Print Request</span>
+                                </div>
+                            </button>
+                            <button
+                                @click="closeModal"
+                                class="p-2 hover:bg-white/80 rounded-xl transition-colors duration-200 group"
+                            >
+                                <svg class="w-6 h-6 text-gray-400 group-hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 
@@ -787,38 +851,7 @@ const consolidateRequest = async () => {
                             </div>
                         </div>
                         
-                        <!-- Print Button -->
-                        <div class="flex justify-end pt-6 border-t border-gray-200">
-                            <button
-                                @click="consolidateRequest"
-                                :disabled="consolidateLoading || !selectedRequest"
-                                class="group relative mr-3 overflow-hidden bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
-                            >
-                                <div class="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-                                <div class="relative flex items-center space-x-2">
-                                    <svg v-if="!consolidateLoading" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                                    </svg>
-                                    <svg v-else class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-                                    </svg>
-                                    <span class="font-semibold">Add to Consolidated</span>
-                                </div>
-                            </button>
-                            <button
-                                @click="printRequest"
-                                class="group relative overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 hover:shadow-xl"
-                            >
-                                <div class="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-                                <div class="relative flex items-center space-x-2">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
-                                    </svg>
-                                    <span class="font-semibold">Print Request</span>
-                                </div>
-                            </button>
-                        </div>
+                        <!-- Print Button moved to header -->
                     </div>
                 </div>
             </div>
@@ -1013,11 +1046,25 @@ const consolidateRequest = async () => {
                             <p class="text-gray-600 mt-1">Aggregated items ready for printing</p>
                         </div>
                     </div>
-                    <button @click="showConsolidateModal = false" class="p-2 hover:bg-white/80 rounded-xl transition-colors duration-200 group">
-                        <svg class="w-6 h-6 text-gray-400 group-hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
+                    <div class="flex items-center space-x-3">
+                        <button
+                            @click="printConsolidated"
+                            class="group relative overflow-hidden bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white px-4 py-2 rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105 hover:shadow-xl"
+                        >
+                            <div class="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                            <div class="relative flex items-center space-x-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                                </svg>
+                                <span class="font-semibold">Print Consolidated</span>
+                            </div>
+                        </button>
+                        <button @click="showConsolidateModal = false" class="p-2 hover:bg-white/80 rounded-xl transition-colors duration-200 group">
+                            <svg class="w-6 h-6 text-gray-400 group-hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
                 <div class="p-8 overflow-y-auto max-h-[calc(90vh-140px)]">
                     <div class="bg-gray-50 rounded-2xl p-6 border border-gray-200">
@@ -1074,18 +1121,6 @@ const consolidateRequest = async () => {
                             :disabled="consolidatedItems.length === 0"
                         >
                             Clear Consolidated
-                        </button>
-                        <button
-                            @click="printConsolidated"
-                            class="group relative overflow-hidden bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white px-6 py-3 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 hover:shadow-xl"
-                        >
-                            <div class="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-                            <div class="relative flex items-center space-x-2">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
-                                </svg>
-                                <span class="font-semibold">Print Consolidated</span>
-                            </div>
                         </button>
                     </div>
                 </div>

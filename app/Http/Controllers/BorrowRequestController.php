@@ -19,13 +19,15 @@ class BorrowRequestController extends Controller
     $request->validate([
         'item_id' => 'required|exists:items,id',
         'quantity' => 'required|integer|min:1',
-        'expected_return' => 'required|date',
+        'borrow_date' => 'required|date',
+        'expected_return' => 'required|date|after_or_equal:borrow_date',
     ]);
 
     BorrowRequest::create([
         'user_id' => Auth::id(),
         'item_id' => $request->item_id,
         'quantity' => $request->quantity,
+        'borrow_date' => $request->borrow_date,
         'expected_return' => $request->expected_return,
     ]);
 
@@ -34,7 +36,9 @@ class BorrowRequestController extends Controller
 
 public function index()
 {
-    $borrowedItems = BorrowRequest::with(['item', 'user'])->where('status', 'pending')->get();
+    $borrowedItems = BorrowRequest::with(['item', 'user'])
+        ->where('status', 'pending')
+        ->get();
 
     return inertia('BorrowRequest', [
         'borrowedItems' => $borrowedItems,

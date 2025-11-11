@@ -196,8 +196,8 @@ const submitPasswordChange = async () => {
                 <tr>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
+                  <!-- <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th> -->
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Resposibility Center</th>
                   <th class="px-6 py-3" />
                 </tr>
               </thead>
@@ -215,7 +215,7 @@ const submitPasswordChange = async () => {
                     </div>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ user.email }}</td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ user.phone_number }}</td>
+                  <!-- <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ user.phone_number }}</td> -->
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ user.address }}</td>
                   <td class="px-6 py-4 whitespace-nowrap text-right text-sm space-x-2">
                     <button

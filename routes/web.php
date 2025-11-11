@@ -105,6 +105,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/api/office-request/{id}', [OfficeRequestController::class, 'show']);
     Route::post('/api/office-request/{id}/approve', [OfficeRequestController::class, 'approve']);
     Route::post('/api/office-request/{id}/consolidate', [OfficeRequestController::class, 'consolidate']);
+    Route::delete('/api/office-request/{id}', [OfficeRequestController::class, 'destroy']);
     Route::get('/api/office-request-history', [OfficeRequestController::class, 'allHistory']);
     Route::get('/api/consolidated-form', [OfficeRequestController::class, 'getConsolidatedForm']);
     Route::post('/api/consolidated-form/clear', [OfficeRequestController::class, 'clearConsolidatedForm']);

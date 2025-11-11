@@ -14,6 +14,7 @@ class BorrowRequest extends Model
         'item_id',
         'user_id',     // <-- Add this line
         'quantity',
+        'borrow_date',
         'expected_return',
         'status',
     ];

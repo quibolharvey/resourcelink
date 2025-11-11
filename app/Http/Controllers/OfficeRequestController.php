@@ -8,6 +8,7 @@ use App\Models\ConsolidatedItem;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\DB;
 
 class OfficeRequestController extends Controller
 {
@@ -177,6 +178,30 @@ class OfficeRequestController extends Controller
         if ($form) {
             $form->items()->delete();
         }
+        return response()->json(['success' => true]);
+    }
+
+    public function destroy($id)
+    {
+        $user = auth()->user();
+        if (!$user || !$user->hasRole('admin')) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $officeRequest = \App\Models\OfficeRequest::with('purchaseCart.items')->findOrFail($id);
+
+        DB::transaction(function () use ($officeRequest) {
+            $cart = $officeRequest->purchaseCart;
+            if ($cart) {
+                // delete related items then cart
+                if (method_exists($cart, 'items')) {
+                    $cart->items()->delete();
+                }
+                $cart->delete();
+            }
+            $officeRequest->delete();
+        });
+
         return response()->json(['success' => true]);
     }
 }

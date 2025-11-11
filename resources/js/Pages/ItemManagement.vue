@@ -150,6 +150,7 @@ const deleteItem = (id) => {
                                         <span class="text-sm">Qty: {{ item.quantity }}</span>
                                     </div>
                                     <div class="flex items-center">
+                                        <h5>Fee per item:</h5>
                                         <span class="text-2xl font-bold bg-gradient-to-r from-green-600 to-green-700 bg-clip-text text-transparent">
                                             ₱{{ parseFloat(item.fee).toLocaleString() }}
                                         </span>

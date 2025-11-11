@@ -228,6 +228,9 @@ const formatDate = (dateString) => {
                     Available Stock
                   </th>
                   <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Borrowed Date
+                  </th>
+                  <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Return Date
                   </th>
                   <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
@@ -236,9 +239,9 @@ const formatDate = (dateString) => {
                   <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Contact
                   </th>
-                  <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <!-- <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Status
-                  </th>
+                  </th> -->
                   <th class="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Actions
                   </th>
@@ -290,6 +293,12 @@ const formatDate = (dateString) => {
                     </div>
                   </td>
 
+                  <!-- Borrowed Date -->
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">{{ borrow.borrow_date ? formatDate(borrow.borrow_date) : 'N/A' }}</div>
+                    <div class="text-sm text-gray-500">Date to Borrow</div>
+                  </td>
+
                   <!-- Return Date -->
                   <td class="px-6 py-4 whitespace-nowrap">
                     <div class="text-sm text-gray-900">{{ formatDate(borrow.expected_return) }}</div>
@@ -325,7 +334,7 @@ const formatDate = (dateString) => {
                   </td>
 
                   <!-- Status -->
-                  <td class="px-6 py-4 whitespace-nowrap">
+                  <!-- <td class="px-6 py-4 whitespace-nowrap">
                     <span 
                       :class="{
                         'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium': true,
@@ -351,7 +360,7 @@ const formatDate = (dateString) => {
                       </svg>
                       {{ borrow.status.charAt(0).toUpperCase() + borrow.status.slice(1) }}
                     </span>
-                  </td>
+                  </td> -->
 
                   <!-- Actions -->
                   <td class="px-6 py-4 whitespace-nowrap text-center">
