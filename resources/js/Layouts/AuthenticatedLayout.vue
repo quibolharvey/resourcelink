@@ -20,6 +20,10 @@ const announcements = ref([]);
 const announcementCount = ref(0);
 const isLoading = ref(false);
 
+// Announcement modal state
+const showAnnouncementModal = ref(false);
+const selectedAnnouncement = ref(null);
+
 // Show bell icon only for users and office (not admin)
 const showBellIcon = computed(() => isUser.value || isOffice.value);
 
@@ -45,6 +49,18 @@ const toggleAnnouncements = () => {
     }
 };
 
+// Open/close announcement modal
+const openAnnouncementModal = (announcement) => {
+    selectedAnnouncement.value = announcement;
+    showAnnouncementModal.value = true;
+    showingAnnouncements.value = false; // Close dropdown when opening modal
+};
+
+const closeAnnouncementModal = () => {
+    showAnnouncementModal.value = false;
+    selectedAnnouncement.value = null;
+};
+
 // Get priority color
 const getPriorityColor = (priority) => {
     const colors = {
@@ -58,6 +74,7 @@ const getPriorityColor = (priority) => {
 
 // Format date
 const formatDate = (date) => {
+    if (!date) return 'N/A';
     return new Date(date).toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
@@ -360,7 +377,8 @@ onMounted(() => {
                   <div 
                     v-for="announcement in announcements" 
                     :key="announcement.id"
-                    class="p-4 border-b border-slate-100 hover:bg-slate-50 transition-colors duration-150"
+                    class="p-4 border-b border-slate-100 hover:bg-slate-50 transition-colors duration-150 cursor-pointer"
+                    @click="openAnnouncementModal(announcement)"
                   >
                     <div class="flex items-start justify-between mb-2">
                       <div class="flex items-center space-x-2">
@@ -472,5 +490,75 @@ onMounted(() => {
       @click="showingNavigationDropdown = false"
       class="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 sm:hidden transition-opacity duration-300"
     ></div>
+
+    <!-- Announcement Readable Modal -->
+    <div 
+      v-if="showAnnouncementModal"
+      class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      @click.self="closeAnnouncementModal"
+    >
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-blue-600 to-indigo-600">
+          <div class="flex items-center justify-between">
+            <h3 class="text-white text-xl font-semibold">Announcement</h3>
+            <button @click="closeAnnouncementModal" class="text-white/90 hover:text-white">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="px-6 py-5 space-y-4">
+          <div class="flex items-center flex-wrap gap-2">
+            <h4 class="text-2xl font-bold text-slate-800">{{ selectedAnnouncement?.title }}</h4>
+            <span v-if="selectedAnnouncement?.is_pinned" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+              <svg class="w-3.5 h-3.5 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+              </svg>
+              Pinned
+            </span>
+            <span 
+              v-if="selectedAnnouncement"
+              :class="getPriorityColor(selectedAnnouncement.priority)"
+              class="px-2.5 py-1 text-xs font-medium rounded-full"
+            >
+              {{ selectedAnnouncement.priority?.toUpperCase() }}
+            </span>
+            <span 
+              v-if="selectedAnnouncement"
+              :class="selectedAnnouncement.status === 'published' ? 'text-green-600 bg-green-50' : 'text-gray-600 bg-gray-50'"
+              class="px-2.5 py-1 text-xs font-medium rounded-full"
+            >
+              {{ selectedAnnouncement.status?.toUpperCase() }}
+            </span>
+          </div>
+
+          <div class="text-sm text-slate-500">
+            <span>By {{ selectedAnnouncement?.user?.name }}</span>
+            <span class="mx-2">•</span>
+            <span>{{ formatDate(selectedAnnouncement?.created_at) }}</span>
+          </div>
+
+          <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+            <p class="text-slate-700 whitespace-pre-wrap leading-relaxed">{{ selectedAnnouncement?.message }}</p>
+          </div>
+
+          <div v-if="selectedAnnouncement?.target_roles?.length" class="text-sm text-slate-600">
+            <span class="font-medium">Target Roles:</span>
+            <span>{{ selectedAnnouncement.target_roles.join(', ') }}</span>
+          </div>
+
+          <div v-if="selectedAnnouncement?.expires_at" class="text-sm text-slate-600">
+            <span class="font-medium">Expires:</span>
+            <span>{{ formatDate(selectedAnnouncement.expires_at) }}</span>
+          </div>
+        </div>
+
+        <div class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-end space-x-3">
+          <button @click="closeAnnouncementModal" class="px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-white">Close</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>

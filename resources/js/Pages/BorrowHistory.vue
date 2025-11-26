@@ -255,6 +255,151 @@ const printByStatus = (status) => {
         printWindow.print();
     }, 250);
 };
+
+// Print function for all items
+const printAll = () => {
+    const allHistories = sortedBorrowedHistories.value;
+    
+    if (allHistories.length === 0) {
+        alert('No items to print.');
+        return;
+    }
+
+    const printWindow = window.open('', '_blank');
+    
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Borrowed History - All Items</title>
+            <style>
+                @media print {
+                    @page {
+                        margin: 1cm;
+                    }
+                }
+                body {
+                    font-family: Arial, sans-serif;
+                    margin: 20px;
+                    color: #333;
+                }
+                .header {
+                    text-align: center;
+                    margin-bottom: 30px;
+                    border-bottom: 3px solid #333;
+                    padding-bottom: 20px;
+                }
+                .header h1 {
+                    margin: 0;
+                    font-size: 24px;
+                    color: #1f2937;
+                }
+                .header p {
+                    margin: 5px 0;
+                    color: #6b7280;
+                }
+                .info {
+                    margin-bottom: 20px;
+                    padding: 15px;
+                    background-color: #f9fafb;
+                    border-radius: 8px;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-top: 20px;
+                }
+                th, td {
+                    border: 1px solid #d1d5db;
+                    padding: 12px;
+                    text-align: left;
+                }
+                th {
+                    background-color: #f3f4f6;
+                    font-weight: bold;
+                    color: #1f2937;
+                }
+                tr:nth-child(even) {
+                    background-color: #f9fafb;
+                }
+                .status-badge {
+                    padding: 4px 12px;
+                    border-radius: 12px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    display: inline-block;
+                }
+                .status-accepted {
+                    background-color: #dbeafe;
+                    color: #1e40af;
+                }
+                .status-returned {
+                    background-color: #d1fae5;
+                    color: #065f46;
+                }
+                .status-overdue {
+                    background-color: #fee2e2;
+                    color: #991b1b;
+                }
+                .footer {
+                    margin-top: 30px;
+                    text-align: center;
+                    font-size: 12px;
+                    color: #6b7280;
+                    border-top: 1px solid #e5e7eb;
+                    padding-top: 20px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>Borrowed History Report</h1>
+                <p>All Items</p>
+                <p>Generated on: ${new Date().toLocaleString()}</p>
+            </div>
+            <div class="info">
+                <strong>Total Records:</strong> ${allHistories.length}
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Item Name</th>
+                        <th>Quantity</th>
+                        <th>Borrower Name</th>
+                        <th>Borrower Address</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Expected Return Date</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${allHistories.map(history => `
+                        <tr>
+                            <td>${history.item?.name || 'N/A'}</td>
+                            <td>${history.quantity}</td>
+                            <td>${history.user?.name || 'N/A'}</td>
+                            <td>${history.user?.address || 'N/A'}</td>
+                            <td>${history.user?.email || 'N/A'}</td>
+                            <td>${history.user?.phone_number || 'N/A'}</td>
+                            <td>${formatDate(history.expected_return_date)}</td>
+                            <td><span class="status-badge status-${history.status}">${history.status.charAt(0).toUpperCase() + history.status.slice(1)}</span></td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+            <div class="footer">
+                <p>This is a computer-generated report.</p>
+            </div>
+        </body>
+        </html>
+    `);
+    
+    printWindow.document.close();
+    setTimeout(() => {
+        printWindow.print();
+    }, 250);
+};
 </script>
 
 <template>
@@ -382,14 +527,27 @@ const printByStatus = (status) => {
                 <!-- Main Table Card -->
                 <div class="bg-white shadow-xl rounded-3xl border border-gray-100 overflow-hidden">
                     <div class="p-8 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
-                        <h3 class="text-xl font-semibold text-gray-800 flex items-center gap-2">
-                            <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5a2 2 0 012-2h4a2 2 0 012 2v1H8V5z"></path>
-                            </svg>
-                            Borrowed Items Records
-                        </h3>
-                        <p class="text-gray-500 mt-1">Complete history of all borrowed items and their current status</p>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-xl font-semibold text-gray-800 flex items-center gap-2">
+                                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5a2 2 0 012-2h4a2 2 0 012 2v1H8V5z"></path>
+                                    </svg>
+                                    Borrowed Items Records
+                                </h3>
+                                <p class="text-gray-500 mt-1">Complete history of all borrowed items and their current status</p>
+                            </div>
+                            <button
+                                @click="printAll"
+                                class="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-sm font-semibold rounded-lg transition-all duration-200 flex items-center space-x-2 shadow-md hover:shadow-lg"
+                            >
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                                </svg>
+                                <span>Print All</span>
+                            </button>
+                        </div>
                     </div>
                     
                     <div class="p-8">

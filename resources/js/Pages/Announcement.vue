@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, nextTick } from 'vue';
 import { Head, useForm, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 
@@ -13,7 +13,12 @@ const props = defineProps({
 const showCreateModal = ref(false);
 const showEditModal = ref(false);
 const showDeleteModal = ref(false);
+const showViewModal = ref(false);
 const selectedAnnouncement = ref(null);
+
+// --- Textarea Refs ---
+const createMessageTextarea = ref(null);
+const editMessageTextarea = ref(null);
 
 // --- Form States ---
 const createForm = useForm({
@@ -66,6 +71,14 @@ const openEditModal = (announcement) => {
     editForm.expires_at = announcement.expires_at ? announcement.expires_at.split('T')[0] : '';
     editForm.is_pinned = announcement.is_pinned;
     showEditModal.value = true;
+    // Auto-resize textarea after modal opens and content is loaded
+    nextTick(() => {
+        setTimeout(() => {
+            if (editMessageTextarea.value) {
+                autoResizeTextarea(editMessageTextarea.value);
+            }
+        }, 100);
+    });
 };
 
 const openDeleteModal = (announcement) => {
@@ -73,11 +86,27 @@ const openDeleteModal = (announcement) => {
     showDeleteModal.value = true;
 };
 
+const openViewModal = (announcement) => {
+    selectedAnnouncement.value = announcement;
+    showViewModal.value = true;
+};
+
 const closeModals = () => {
     showCreateModal.value = false;
     showEditModal.value = false;
     showDeleteModal.value = false;
+    showViewModal.value = false;
     selectedAnnouncement.value = null;
+};
+
+const openEditFromView = () => {
+    const announcement = selectedAnnouncement.value;
+    showViewModal.value = false;
+    nextTick(() => {
+        if (announcement) {
+            openEditModal(announcement);
+        }
+    });
 };
 
 const createAnnouncement = () => {
@@ -124,6 +153,24 @@ const formatDate = (date) => {
         hour: '2-digit',
         minute: '2-digit',
     });
+};
+
+// Auto-resize textarea function
+const autoResizeTextarea = (textarea) => {
+    if (textarea) {
+        textarea.style.height = 'auto';
+        textarea.style.height = textarea.scrollHeight + 'px';
+    }
+};
+
+// Handle textarea input for create form
+const handleCreateMessageInput = (event) => {
+    autoResizeTextarea(event.target);
+};
+
+// Handle textarea input for edit form
+const handleEditMessageInput = (event) => {
+    autoResizeTextarea(event.target);
 };
 </script>
 
@@ -241,7 +288,8 @@ const formatDate = (date) => {
                         <div 
                             v-for="announcement in announcements.data" 
                             :key="announcement.id"
-                            class="p-6 hover:bg-gray-50 transition-colors duration-200"
+                            class="p-6 hover:bg-gray-50 transition-colors duration-200 cursor-pointer"
+                            @click.stop="openViewModal(announcement)"
                         >
                             <div class="flex items-start justify-between">
                                 <div class="flex-1">
@@ -304,7 +352,7 @@ const formatDate = (date) => {
                                     </div>
                                 </div>
 
-                                <div class="flex items-center space-x-2 ml-4">
+                                <div class="flex items-center space-x-2 ml-4" @click.stop>
                                     <button 
                                         @click="togglePin(announcement)"
                                         :class="[
@@ -433,11 +481,14 @@ const formatDate = (date) => {
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">Message</label>
                             <textarea 
+                                ref="createMessageTextarea"
                                 v-model="createForm.message" 
+                                @input="handleCreateMessageInput"
                                 rows="4"
-                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 resize-none"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 resize-none overflow-hidden"
                                 :class="{ 'border-red-500 ring-2 ring-red-200': createForm.errors.message }" 
                                 placeholder="Enter announcement message"
+                                style="min-height: 100px;"
                             ></textarea>
                             <div v-if="createForm.errors.message" class="text-red-500 text-sm mt-1">{{ createForm.errors.message }}</div>
                         </div>
@@ -563,10 +614,13 @@ const formatDate = (date) => {
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">Message</label>
                             <textarea 
+                                ref="editMessageTextarea"
                                 v-model="editForm.message" 
+                                @input="handleEditMessageInput"
                                 rows="4"
-                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none overflow-hidden"
                                 :class="{ 'border-red-500 ring-2 ring-red-200': editForm.errors.message }" 
+                                style="min-height: 100px;"
                             ></textarea>
                             <div v-if="editForm.errors.message" class="text-red-500 text-sm mt-1">{{ editForm.errors.message }}</div>
                         </div>
@@ -661,6 +715,134 @@ const formatDate = (date) => {
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <!-- View Modal -->
+        <div v-if="showViewModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm" @click.self="closeModals">
+            <div class="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-8">
+                    <!-- Modal Header -->
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center space-x-3">
+                            <div class="p-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 class="text-2xl font-bold text-gray-900">Announcement Details</h2>
+                            </div>
+                        </div>
+                        <button 
+                            @click="closeModals"
+                            class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                        >
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Announcement Content -->
+                    <div v-if="selectedAnnouncement" class="space-y-6">
+                        <!-- Title and Badges -->
+                        <div>
+                            <div class="flex items-center flex-wrap gap-3 mb-4">
+                                <h3 class="text-3xl font-bold text-gray-900">{{ selectedAnnouncement.title }}</h3>
+                                <span 
+                                    v-if="selectedAnnouncement.is_pinned"
+                                    class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800"
+                                >
+                                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                    </svg>
+                                    Pinned
+                                </span>
+                                <span 
+                                    :class="[
+                                        'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium',
+                                        priorityColors[selectedAnnouncement.priority]
+                                    ]"
+                                >
+                                    {{ selectedAnnouncement.priority.toUpperCase() }}
+                                </span>
+                                <span 
+                                    :class="[
+                                        'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium',
+                                        statusColors[selectedAnnouncement.status]
+                                    ]"
+                                >
+                                    {{ selectedAnnouncement.status.toUpperCase() }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Message Content -->
+                        <div class="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                            <p class="text-gray-700 text-lg leading-relaxed whitespace-pre-wrap">{{ selectedAnnouncement.message }}</p>
+                        </div>
+
+                        <!-- Metadata -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                                <div class="flex items-center space-x-2 mb-2">
+                                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                    </svg>
+                                    <span class="text-sm font-semibold text-blue-900">Created By</span>
+                                </div>
+                                <p class="text-blue-700">{{ selectedAnnouncement.user?.name || 'N/A' }}</p>
+                            </div>
+
+                            <div class="bg-green-50 rounded-lg p-4 border border-green-200">
+                                <div class="flex items-center space-x-2 mb-2">
+                                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <span class="text-sm font-semibold text-green-900">Created At</span>
+                                </div>
+                                <p class="text-green-700">{{ formatDate(selectedAnnouncement.created_at) }}</p>
+                            </div>
+
+                            <div v-if="selectedAnnouncement.target_roles && selectedAnnouncement.target_roles.length > 0" class="bg-purple-50 rounded-lg p-4 border border-purple-200">
+                                <div class="flex items-center space-x-2 mb-2">
+                                    <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                    </svg>
+                                    <span class="text-sm font-semibold text-purple-900">Target Roles</span>
+                                </div>
+                                <p class="text-purple-700">{{ selectedAnnouncement.target_roles.join(', ') }}</p>
+                            </div>
+
+                            <div v-if="selectedAnnouncement.expires_at" class="bg-orange-50 rounded-lg p-4 border border-orange-200">
+                                <div class="flex items-center space-x-2 mb-2">
+                                    <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <span class="text-sm font-semibold text-orange-900">Expires At</span>
+                                </div>
+                                <p class="text-orange-700">{{ formatDate(selectedAnnouncement.expires_at) }}</p>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                            <button 
+                                @click="closeModals"
+                                class="px-6 py-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-all duration-200"
+                            >
+                                Close
+                            </button>
+                            <button 
+                                @click="openEditFromView"
+                                class="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-lg"
+                            >
+                                Edit Announcement
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 

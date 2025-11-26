@@ -29,7 +29,7 @@ class DatabaseSeeder extends Seeder
 
         // Create admin user if it doesn't exist
         $admin = User::firstOrCreate(
-            ['email' => 'admin@example.com'],
+            ['email' => 'admin@calape.com'],
             [
                 'name' => 'Admin Account',
                 'phone_number' => '1234567890',
@@ -232,7 +232,7 @@ class DatabaseSeeder extends Seeder
 
         // Create regular user if it doesn't exist
         $user = User::firstOrCreate(
-            ['email' => 'user@example.com'],
+            ['email' => 'user@calape.com'],
             [
                 'name' => 'User Account',
                 'phone_number' => '1122334455',
@@ -244,7 +244,7 @@ class DatabaseSeeder extends Seeder
 
         // Create test user if it doesn't exist
         $testUser = User::firstOrCreate(
-            ['email' => 'test@example.com'],
+            ['email' => 'test@calape.com'],
             [
                 'name' => 'Test User',
                 'phone_number' => '1234567891',
